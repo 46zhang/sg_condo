@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Question or Discussion
+    url: ../../discussions
+    about: Ask a question, share your search experience, discuss scoring · 提问、分享找房经验、讨论评分
+  - name: 📖 Read the Contributing Guide
+    url: ../../blob/main/CONTRIBUTING.md
+    about: How to report bugs, request features, and submit PRs · 如何反馈 Bug、提建议、提交 PR
