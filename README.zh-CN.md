@@ -8,7 +8,7 @@
 
 [**🔗 在线试用 →**](https://46zhang.github.io/sg_condo/)
 
-![SGCondo 截图](docs/sg_condo_screenshot.png)
+![SGCondo 截图](docs/sg_condo_screenshot)
 
 ---
 
@@ -56,12 +56,12 @@
 ## 🚀 如何使用
 
 ### 只想试用？
-👉 [**打开在线 demo**](https://YOUR_USERNAME.github.io/REPO_NAME/sg_condo_pr_standalone.html) —— 一切都在浏览器中运行，无需安装。
+👉 [**打开在线 demo**](https://46zhang.github.io/sg_condo/) —— 一切都在浏览器中运行，无需安装。
 
 ### 想本地运行？
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/REPO_NAME.git
+git clone https://github.com/46zhang/sg_condo.git
 cd REPO_NAME
 # 直接在浏览器打开
 open sg_condo_pr_standalone.html
@@ -103,7 +103,7 @@ git push -u origin main
 
 你的网站会在以下地址上线：
 ```
-https://YOUR_USERNAME.github.io/YOUR_REPO/sg_condo_pr_standalone.html
+https://YOUR_USERNAME.github.io/YOUR_REPO/index.html
 ```
 
 之后更新内容只需 `git push`，Pages 会自动重新构建。
@@ -115,7 +115,7 @@ https://YOUR_USERNAME.github.io/YOUR_REPO/sg_condo_pr_standalone.html
 ### 方式 C · 本地文件或任意静态服务器
 
 因为是自包含的单文件 HTML，你可以：
-- 直接**双击** `sg_condo_pr_standalone.html` 在浏览器本地打开
+- 直接**双击** `index.html` 在浏览器本地打开
 - 上传到任何 Web 服务器（nginx、Apache、S3 + CloudFront 等）
 - 用邮件或 U 盘分享
 

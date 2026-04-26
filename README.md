@@ -56,12 +56,12 @@ Singapore's Freehold (FH) vs 99-year Leasehold (LH) is more nuanced than "FH alw
 ## 🚀 How to use
 
 ### Just want to try it?
-👉 [**Open the live demo**](https://YOUR_USERNAME.github.io/REPO_NAME/sg_condo_pr_standalone.html) — everything runs in your browser, nothing to install.
+👉 [**Open the live demo**](https://46zhang.github.io/sg_condo/) — everything runs in your browser, nothing to install.
 
 ### Want to run it locally?
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/REPO_NAME.git
+git clone https://github.com/46zhang/sg_condo.git
 cd REPO_NAME
 open sg_condo_pr_standalone.html
 ```
@@ -102,7 +102,7 @@ git push -u origin main
 
 Your site will be live at:
 ```
-https://YOUR_USERNAME.github.io/YOUR_REPO/sg_condo_pr_standalone.html
+https://YOUR_USERNAME.github.io/YOUR_REPO/index.html
 ```
 
 To update later, just `git push` — Pages rebuilds automatically.
@@ -114,7 +114,7 @@ These also work out of the box (drag-and-drop the HTML file or connect the repo)
 ### Option C · Local file or any static host
 
 Since it's a self-contained HTML file, you can:
-- Just **double-click** `sg_condo_pr_standalone.html` to open it in your browser locally
+- Just **double-click** `index.html` to open it in your browser locally
 - Drop it into any web server (nginx, Apache, S3 + CloudFront, etc.)
 - Share via email or USB stick
 
