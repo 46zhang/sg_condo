@@ -8,7 +8,7 @@ Built with **PR / foreigner buyer perspective** in mind (ABSD, BSD, CPF rules). 
 
 [**🔗 Try it live →**](https://46zhang.github.io/sg_condo/)
 
-![SGCondo screenshot](docs/sg_condo_screenshot)
+![SGCondo screenshot](docs/sg_condo_screenshot.png)
 
 ---
 
@@ -56,7 +56,7 @@ Singapore's Freehold (FH) vs 99-year Leasehold (LH) is more nuanced than "FH alw
 ## 🚀 How to use
 
 ### Just want to try it?
-👉 [**Open the live demo**](https://github.com/46zhang/sg_condo/blob/main/index.html) — everything runs in your browser, nothing to install.
+👉 [**Open the live demo**](https://YOUR_USERNAME.github.io/REPO_NAME/sg_condo_pr_standalone.html) — everything runs in your browser, nothing to install.
 
 ### Want to run it locally?
 
@@ -75,6 +75,66 @@ The HTML file is fully self-contained — data is embedded inside, no server nee
 - **Tweak the weights** — On a wide screen, the right rail lets you fine-tune per-dimension importance
 - **Star promising projects** — Star button on each card; up to 4 can be compared side-by-side
 - **Click the score ring** — Reveals a detailed breakdown explaining how the score was calculated
+
+---
+
+## 🌐 Deploy your own copy
+
+The whole app is a **single HTML file** with embedded data — no server, no database, no build pipeline. Pick whichever host you like.
+
+### Option A · GitHub Pages (free, recommended)
+
+```bash
+# 1. Fork or clone this repo
+git clone https://github.com/YOUR_USERNAME/REPO_NAME.git
+cd REPO_NAME
+
+# 2. Push to your own GitHub repo (must be public for free Pages)
+git remote set-url origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+git push -u origin main
+
+# 3. Enable Pages
+#    GitHub repo → Settings → Pages
+#    Source: Deploy from a branch
+#    Branch: main / (root)
+#    Save → wait ~30 seconds
+```
+
+Your site will be live at:
+```
+https://YOUR_USERNAME.github.io/YOUR_REPO/sg_condo_pr_standalone.html
+```
+
+To update later, just `git push` — Pages rebuilds automatically.
+
+### Option B · Netlify / Vercel / Cloudflare Pages
+
+These also work out of the box (drag-and-drop the HTML file or connect the repo). No build command needed — set the publish directory to `/` (project root).
+
+### Option C · Local file or any static host
+
+Since it's a self-contained HTML file, you can:
+- Just **double-click** `sg_condo_pr_standalone.html` to open it in your browser locally
+- Drop it into any web server (nginx, Apache, S3 + CloudFront, etc.)
+- Share via email or USB stick
+
+### Want fresher data?
+
+The HTML embeds a snapshot of URA transaction data. To regenerate with the latest data, you'll need a **free [URA API key](https://www.ura.gov.sg/maps/api/)** and Node.js 18+. See [CONTRIBUTING.md](./CONTRIBUTING.md) for the data-fetch workflow.
+
+### Security note
+
+Before pushing to a public repo, check that secrets aren't committed:
+
+```bash
+# .env should never be tracked
+git ls-files .env
+
+# Search for hardcoded keys (should only return process.env.* references)
+grep -rn "URA_API\|access_key\|apikey" fetch-*.js
+```
+
+We strongly recommend enabling **GitHub Secret Scanning** (Settings → Code security) for extra safety.
 
 ---
 
