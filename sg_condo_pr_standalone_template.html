@@ -1,0 +1,3359 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<title>SG Condo Finder</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SG Condo">
+<meta name="theme-color" content="#0d1117">
+<meta name="mobile-web-app-capable" content="yes">
+<!-- App 图标（SVG 内嵌，支持 iOS/Android）-->
+<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230d1117'/%3E%3Ctext x='90' y='105' font-size='110' text-anchor='middle' fill='%23f0883e'%3E%F0%9F%8F%99%3C/text%3E%3Ctext x='90' y='150' font-size='22' text-anchor='middle' fill='%23e6edf3' font-family='system-ui, -apple-system' font-weight='600'%3ESG Condo%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='14'%3E%F0%9F%8F%99%3C/text%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --bg:#0a0d12; --panel:#11151c; --panel2:#161b24; --panel3:#1c2230;
+  --line:#222a37; --line2:#2c3545;
+  --t1:#e6ebf2; --t2:#9aa3b2; --t3:#5e6677;
+  --accent:#f59e0b; --accent-soft:rgba(245,158,11,.12);
+  --good:#22c55e; --good-soft:rgba(34,197,94,.13);
+  --warn:#eab308; --warn-soft:rgba(234,179,8,.13);
+  --mid:#f97316;
+  --bad:#ef4444; --bad-soft:rgba(239,68,68,.13);
+  --info:#60a5fa; --info-soft:rgba(96,165,250,.13);
+  --purple:#c084fc;
+  --r:8px; --r2:14px;
+
+  /* Legacy aliases for existing code (kept for compatibility) */
+  --bg2:#11151c; --bg3:#1c2230; --border:#222a37;
+  --text:#e6ebf2; --text2:#9aa3b2; --text3:#5e6677;
+  --blue:#60a5fa; --blue-bg:rgba(96,165,250,.13); --blue-border:#1e3a5f;
+  --green:#22c55e; --green-bg:rgba(34,197,94,.13);
+  --amber:#eab308; --amber-bg:rgba(234,179,8,.13); --amber-border:#5a4a1f;
+  --red:#ef4444; --red-bg:rgba(239,68,68,.13);
+  --cyan:#06b6d4; --pink:#ec4899;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--t1);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased}
+.mono,code{font-family:'JetBrains Mono',monospace;font-feature-settings:"tnum"}
+button{font-family:inherit;color:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;color:inherit}
+a{color:var(--accent);text-decoration:none}
+
+/* ---------- Loading overlay ---------- */
+.loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:18px}
+.loading-overlay.hidden{display:none}
+.loading-title{font-size:18px;font-weight:700;letter-spacing:-.01em}
+.loading-title span{color:var(--accent)}
+.loading-bar{width:360px;max-width:80%;height:5px;background:var(--panel3);border-radius:3px;overflow:hidden}
+.loading-bar-fill{height:100%;background:var(--accent);transition:width .3s;width:0%}
+.loading-stage{font-size:13px;color:var(--t2);font-family:'JetBrains Mono'}
+.loading-text{font-size:11px;color:var(--t3);font-family:'JetBrains Mono'}
+
+/* ---------- Top header ---------- */
+.header{display:flex;align-items:center;gap:18px;padding:14px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50;background:rgba(10,13,18,.92);backdrop-filter:blur(10px)}
+.logo{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px;letter-spacing:-.01em;flex-shrink:0;color:var(--t1)}
+.logo::before{content:"SG";display:grid;place-items:center;width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--accent),#dc2626);font-size:11px;color:#0a0d12;font-weight:800;font-family:'JetBrains Mono'}
+.logo span{color:var(--accent)}
+
+.search-wrap{flex:1;max-width:480px;position:relative}
+.search-wrap::before{content:"";position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235e6677' stroke-width='2' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='m21 21-4.3-4.3'/></svg>");background-repeat:no-repeat}
+.search-input{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 12px 9px 36px;color:var(--t1);font-size:13px;transition:.15s}
+.search-input:focus{outline:none;border-color:var(--accent);background:var(--panel2)}
+.search-input::placeholder{color:var(--t3)}
+.search-clear{position:absolute;right:42px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);cursor:pointer;font-size:14px;padding:4px 6px;display:none}
+.search-clear.on{display:block}
+.search-wrap::after{content:"⌘ K";position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--t3);font-family:'JetBrains Mono';border:1px solid var(--line);padding:1px 5px;border-radius:4px;background:var(--panel2);pointer-events:none}
+.search-suggest{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;max-height:400px;overflow-y:auto;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none}
+.search-suggest.on{display:block}
+.suggest-group{padding:6px 14px 4px;font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;font-family:'JetBrains Mono';border-bottom:1px solid var(--line)}
+.suggest-item{padding:9px 14px;cursor:pointer;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.suggest-item:last-child{border-bottom:none}
+.suggest-item:hover,.suggest-item.active{background:var(--panel2)}
+.suggest-icon{font-size:14px;width:16px;text-align:center}
+.suggest-label{font-size:13px;color:var(--t1)}
+.suggest-sub{font-size:11px;color:var(--t3);font-family:'JetBrains Mono'}
+
+.header-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.pill{font-size:11px;font-family:'JetBrains Mono';padding:4px 10px;border-radius:20px;border:1px solid var(--line);background:var(--panel);color:var(--t2);display:inline-flex;align-items:center;gap:6px}
+.pill.green::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--good);box-shadow:0 0 6px var(--good)}
+#data-status::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--good);box-shadow:0 0 6px var(--good)}
+.icon-btn{background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--t2);cursor:pointer;width:34px;height:34px;display:grid;place-items:center;transition:.15s;font-size:13px;font-family:inherit}
+.icon-btn:hover{color:var(--t1);border-color:var(--line2);background:var(--panel2)}
+
+.search-tag{padding:0 24px 10px;display:none}
+.search-tag.on{display:flex}
+.search-tag-pill{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#0a0d12;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600}
+.search-tag-pill button{background:none;border:none;color:#0a0d12;cursor:pointer;font-size:14px;padding:0 0 0 4px;font-weight:700}
+
+/* ---------- Tab nav ---------- */
+.top-tabs{display:flex;gap:4px;padding:6px 24px 0;border-bottom:1px solid var(--line);background:var(--bg);position:sticky;top:62px;z-index:40}
+.top-tab{background:none;border:none;padding:11px 16px;color:var(--t2);cursor:pointer;font-size:13px;font-weight:500;border-bottom:2px solid transparent;display:flex;align-items:center;gap:8px;margin-bottom:-1px;transition:.15s}
+.top-tab:hover{color:var(--t1)}
+.top-tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* ---------- Goal bar ---------- */
+.goal-bar{display:flex;gap:8px;padding:14px 24px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--line);background:var(--panel)}
+.goal-label{font-size:11px;color:var(--t3);font-family:'JetBrains Mono';text-transform:uppercase;letter-spacing:.08em;margin-right:6px}
+.goal-btn{padding:6px 13px;border-radius:18px;border:1px solid var(--line);background:transparent;color:var(--t2);cursor:pointer;font-size:12px;display:inline-flex;align-items:center;gap:6px;transition:.15s;font-family:inherit;white-space:nowrap}
+.goal-btn:hover{border-color:var(--line2);color:var(--t1)}
+.goal-btn.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:500}
+
+/* ---------- Page panels ---------- */
+.page-panel{display:none}
+.page-panel.on{display:block}
+
+/* ============ LIST PAGE ============ */
+.main-layout{display:grid;grid-template-columns:280px 1fr 320px;gap:0;align-items:start;min-height:calc(100vh - 170px)}
+@media(max-width:1280px){.main-layout{grid-template-columns:280px 1fr}.weights-rail{display:none}}
+@media(max-width:900px){.main-layout{grid-template-columns:1fr}}
+
+/* Filter rail */
+.sidebar{padding:18px 18px 28px;border-right:1px solid var(--line);position:sticky;top:120px;max-height:calc(100vh - 120px);overflow-y:auto}
+.sidebar::-webkit-scrollbar{width:6px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+
+.filter-section{margin-bottom:0;padding:0}
+.filter-section-title{font-size:10px;font-family:'JetBrains Mono';color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin:18px 0 10px;display:flex;align-items:center;justify-content:space-between;font-weight:500}
+.filter-section:first-child .filter-section-title,
+.filter-section-title.first{margin-top:0}
+
+.f{margin-bottom:10px}
+.f label{display:block;font-size:11px;color:var(--t2);margin-bottom:5px}
+.f select,.f input[type=number],.f input[type=text]{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:7px 9px;color:var(--t1);font-size:12px;font-family:'JetBrains Mono';appearance:none}
+.f select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235e6677'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:24px}
+.f select:focus,.f input:focus{outline:none;border-color:var(--accent)}
+.f select option{background:var(--panel)}
+
+.price-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;max-width:240px}
+.price-row input,.price-row input.f{margin-bottom:0;text-align:left;padding:7px 9px;font-size:12px;background:var(--panel)!important;color:var(--t1)!important;border:1px solid var(--line);border-radius:6px;font-family:'JetBrains Mono';-webkit-text-fill-color:var(--t1)}
+.price-row input::placeholder{color:var(--t3)}
+.price-row input:-webkit-autofill,.price-row input:-webkit-autofill:hover,.price-row input:-webkit-autofill:focus{-webkit-text-fill-color:var(--t1)!important;-webkit-box-shadow:0 0 0 1000px var(--panel) inset!important;transition:background-color 5000s ease-in-out 0s}
+.price-row span{display:none}
+
+.price-presets,.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip,.price-preset-btn{padding:3px 9px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--t2);cursor:pointer;font-size:11px;font-family:'JetBrains Mono';transition:.15s}
+.chip:hover,.price-preset-btn:hover{border-color:var(--line2);color:var(--t1)}
+.chip.on,.price-preset-btn.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+
+.wp-presets-stack{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px}
+.wp-preset-btn{padding:5px 8px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--t2);cursor:pointer;font-size:11px;font-family:'JetBrains Mono';text-align:center;transition:.15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wp-preset-btn:hover{border-color:var(--line2);color:var(--t1)}
+.wp-preset-btn.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+
+.adv-toggle{width:100%;background:transparent;border:1px dashed var(--line);border-radius:6px;padding:7px 10px;color:var(--t3);cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:space-between;font-family:'JetBrains Mono';margin-top:8px;transition:.15s}
+.adv-toggle:hover{border-color:var(--line2);color:var(--t2)}
+.adv-panel{display:none;margin-top:8px}
+.adv-panel.open{display:block}
+
+.weight-collapse-toggle{display:none}
+.weights-panel{display:none}
+
+.filter-actions{display:flex;gap:8px;margin-top:14px}
+.btn{border:1px solid var(--line);border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer;background:var(--panel);color:var(--t1);font-family:inherit;transition:.15s}
+.btn:hover{background:var(--panel2);border-color:var(--line2)}
+.btn-accent{background:var(--accent);border-color:var(--accent);color:#0a0d12;font-weight:600}
+.btn-accent:hover{background:#fbbf24;border-color:#fbbf24}
+
+/* Live filter status */
+.filter-live-status{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--good-soft);border:1px solid rgba(34,197,94,.25);border-radius:6px;margin-bottom:14px;font-size:11px;color:var(--good);font-family:'JetBrains Mono'}
+.filter-live-status.searching{background:var(--info-soft);border-color:rgba(96,165,250,.3);color:var(--info)}
+.filter-live-dot{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 6px currentColor}
+
+.goal-echo{display:flex;align-items:center;gap:6px;padding:8px 12px;background:var(--accent-soft);border:1px solid rgba(245,158,11,.25);border-radius:6px;margin-bottom:14px;font-size:11px;font-family:'JetBrains Mono'}
+.goal-echo-label{color:var(--t3)}
+.goal-echo-value{color:var(--accent);font-weight:600;flex:1}
+
+.map-filter-tag{font-size:11px;padding:4px 10px;background:var(--info-soft);border:1px solid rgba(96,165,250,.3);color:var(--info);border-radius:20px;display:none;align-items:center;gap:6px;font-family:'JetBrains Mono'}
+.map-filter-tag.on{display:inline-flex}
+.map-filter-tag button{background:none;border:none;color:var(--info);cursor:pointer;font-size:14px;padding:0 0 0 4px;line-height:1}
+
+/* Results */
+.results-area{padding:18px 22px 40px;min-width:0}
+.sort-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.view-toggle{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px}
+.view-toggle button{padding:5px 12px;border-radius:6px;font-size:12px;background:transparent;border:none;color:var(--t2);cursor:pointer}
+.view-toggle button.on{background:var(--panel3);color:var(--t1);box-shadow:inset 0 0 0 1px var(--line2)}
+.cnt{font-family:'JetBrains Mono';font-size:11px;color:var(--t3);margin-left:auto}
+.cnt b{color:var(--t1);font-weight:500}
+.sort-row select{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 8px;color:var(--t1);font-size:12px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239aa3b2'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px;font-family:inherit}
+
+.results{display:flex;flex-direction:column;gap:14px}
+.empty{text-align:center;padding:3rem;font-size:13px;color:var(--t3)}
+.status{padding:8px 12px;margin-bottom:10px;border-radius:8px;font-size:12px;font-family:'JetBrains Mono'}
+.status.ok{background:var(--good-soft);border:1px solid rgba(34,197,94,.25);color:var(--good)}
+.status.err{background:var(--bad-soft);border:1px solid rgba(239,68,68,.3);color:var(--bad)}
+.status.loading{background:var(--info-soft);border:1px solid rgba(96,165,250,.25);color:var(--info)}
+
+/* ---------- Card ---------- */
+.pc{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;transition:.15s;position:relative;overflow:hidden}
+.pc:hover{border-color:var(--line2);transform:translateY(-1px)}
+.pc.shortlisted{border-color:var(--accent)}
+.pc.expanded{border-color:var(--accent)}
+.pc.map-highlighted{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+
+.pc-top{display:flex;gap:16px;align-items:flex-start;padding:0}
+.pc-thumb{width:84px;height:84px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,#1a2030,#222b3e);display:grid;place-items:center;font-family:'JetBrains Mono';font-size:9px;color:var(--t3);text-align:center;letter-spacing:.05em;border:1px solid var(--line);position:relative;overflow:hidden}
+.pc-thumb::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent 0,transparent 6px,rgba(255,255,255,.015) 6px,rgba(255,255,255,.015) 12px)}
+.pc-thumb-inner{position:relative;z-index:1;line-height:1.3}
+.pc-thumb-initials{font-size:14px;font-weight:600;color:var(--t2);letter-spacing:0;display:block;margin-bottom:2px}
+
+.pc-info{flex:1;min-width:0}
+.pc-title-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:3px}
+.pc-rank{font-family:'JetBrains Mono';font-size:11px;color:var(--t3);min-width:18px}
+.pc-name{font-size:16px;font-weight:600;letter-spacing:-.01em;color:var(--t1)}
+.pc-tag{font-family:'JetBrains Mono';font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.05em}
+.pc-sub{font-size:12px;color:var(--t2);margin-bottom:10px}
+
+/* Dimens row (semantic pills) */
+.pc-keyinfo{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:0}
+.ki{font-size:10px;font-family:'JetBrains Mono';padding:2px 8px;border-radius:10px;background:var(--panel3);color:var(--t2);border:1px solid transparent;display:inline-flex;align-items:center;gap:5px}
+.ki.good{color:var(--good);background:var(--good-soft)}
+.ki.warn{color:var(--warn);background:var(--warn-soft)}
+.ki.bad{color:var(--bad);background:var(--bad-soft)}
+.ki.info{color:var(--info);background:var(--info-soft)}
+.ki.price{color:var(--t1);background:var(--panel3)}
+.ki.mrt{color:var(--warn);background:var(--warn-soft)}
+.ki.commute{color:var(--info);background:var(--info-soft)}
+.ki.age{color:var(--t2);background:var(--panel3)}
+.ki.school{color:var(--purple);background:rgba(192,132,252,.13)}
+
+/* External links row */
+.ext-links-wrap{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.ext-links-group{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ext-links-label{font-size:10px;color:var(--t3);font-family:'JetBrains Mono';text-transform:uppercase;letter-spacing:.06em}
+.ext-link{font-size:10px;font-family:'JetBrains Mono';padding:2px 8px;border-radius:10px;background:transparent;border:1px solid var(--line);color:var(--t2);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:3px;transition:.15s}
+.ext-link:hover{border-color:var(--line2);color:var(--t1)}
+
+/* Score ring */
+.pc-score{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+.pc-score-ring{position:relative;width:64px;height:64px;display:grid;place-items:center}
+.pc-score-ring svg{position:absolute;transform:rotate(-90deg);width:64px;height:64px}
+.pc-score-ring .ring-num{position:relative;z-index:1;font-family:'JetBrains Mono';font-size:20px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.pc-score-ring .ring-num small{display:none}
+.pc-score-ring .l{display:none}
+.pc-score-label{font-size:10px;color:var(--t3);font-family:'JetBrains Mono';text-transform:uppercase;letter-spacing:.08em}
+.pc-sl-btn{background:none;border:none;color:var(--t3);cursor:pointer;font-size:18px;padding:0;line-height:1;transition:.15s}
+.pc-sl-btn:hover{color:var(--accent)}
+.pc-sl-btn.on{color:var(--accent)}
+
+/* Stats grid (4-col) */
+.detail-grid,.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border-radius:10px;overflow:hidden;margin-top:14px;border:1px solid var(--line)}
+.sb,.stat{background:var(--panel2);padding:12px 14px;text-align:left}
+.sv,.stat-v{font-family:'JetBrains Mono';font-size:15px;font-weight:600;color:var(--t1);letter-spacing:-.02em;display:block}
+.sv small,.stat-v small{font-size:10px;color:var(--t3);font-weight:400;margin-left:2px}
+.sl,.stat-l{font-size:10px;color:var(--t3);text-transform:uppercase;font-family:'JetBrains Mono';letter-spacing:.06em;margin-top:2px}
+
+/* Card detail content - now collapsible */
+.pc-detail-content{display:none;margin-top:14px;border-top:1px dashed var(--line);padding-top:14px}
+.pc.expanded .pc-detail-content{display:block}
+.pc-detail-toggle{margin-top:12px;font-size:11px;color:var(--t3);cursor:pointer;font-family:'JetBrains Mono';display:inline-flex;align-items:center;gap:5px;background:none;border:none;padding:0;transition:.15s}
+.pc-detail-toggle:hover{color:var(--accent)}
+.pc-detail-toggle .chev{transition:.2s;font-size:9px}
+.pc.expanded .pc-detail-toggle .chev{transform:rotate(180deg)}
+
+/* MRT / school / tx blocks inside detail */
+.mrt-block{padding:10px 0;border-bottom:1px dashed var(--line);font-size:12px;color:var(--warn);font-family:'JetBrains Mono';margin-bottom:0;background:transparent;border-left:none;border-radius:0;border-right:none;border-top:none}
+.mrt-block strong{color:#fbbf24;font-weight:500}
+.mrt-list{display:flex;flex-direction:column;gap:3px;margin-top:5px}
+.mrt-row{display:grid;grid-template-columns:1fr 55px 55px;gap:4px;font-size:11px;color:var(--t3)}
+
+.school-block{padding:10px 0;border-bottom:1px dashed var(--line);font-size:12px;font-family:'JetBrains Mono';margin-bottom:0;background:transparent;border-radius:0;border-left:none;border-right:none;border-top:none;color:var(--purple)}
+.school-block.far{color:var(--t3)}
+.school-list{display:flex;flex-direction:column;gap:3px;margin-top:5px}
+.school-row{display:grid;grid-template-columns:1fr 80px;gap:4px;font-size:11px}
+.school-block strong{color:#d8b4fe;font-weight:500}
+
+.recent-tx-title{font-size:10px;color:var(--t3);text-transform:uppercase;font-family:'JetBrains Mono';letter-spacing:.06em;margin-bottom:5px;margin-top:10px}
+.tx-row{display:grid;grid-template-columns:65px 1fr 75px 65px 80px;gap:6px;padding:4px 0;font-size:11px;font-family:'JetBrains Mono';color:var(--t2);border-bottom:1px dashed var(--line)}
+.tx-row:last-child{border-bottom:none}
+
+.project-link{color:var(--accent);font-size:11px;cursor:pointer;font-family:'JetBrains Mono'}
+.project-link:hover{text-decoration:underline}
+
+/* ============ Right weights rail ============ */
+.weights-rail{padding:18px;position:sticky;top:120px;max-height:calc(100vh - 120px);overflow-y:auto;border-left:1px solid var(--line)}
+.weights-rail::-webkit-scrollbar{width:6px}
+.weights-rail::-webkit-scrollbar-thumb{background:var(--line2)}
+.weights-banner{background:linear-gradient(135deg,var(--accent-soft),transparent);border:1px solid rgba(245,158,11,.25);padding:12px 14px;border-radius:10px;margin-bottom:18px}
+.weights-banner h5{font-size:13px;font-weight:600;color:var(--accent);margin-bottom:4px}
+.weights-banner p{font-size:11px;color:var(--t2);line-height:1.5}
+.weights-banner b{color:var(--accent)}
+.weight-item{margin-bottom:14px}
+.weight-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px}
+.weight-label{color:var(--t1);display:flex;align-items:center;gap:6px}
+.weight-val{font-family:'JetBrains Mono';color:var(--accent);font-size:11px;font-weight:500}
+.weight-item input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:4px;background:var(--panel3);border-radius:2px;outline:none;margin:0}
+.weight-item input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg)}
+.weight-item input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg)}
+.weight-sum-row{display:flex;justify-content:space-between;font-size:11px;margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font-family:'JetBrains Mono'}
+.weight-presets{display:flex;flex-wrap:wrap;gap:5px;margin-top:14px}
+.preset-btn{padding:4px 10px;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--t2);cursor:pointer;font-size:11px;font-family:'JetBrains Mono';transition:.15s}
+.preset-btn:hover{border-color:var(--line2);color:var(--t1)}
+.preset-btn.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+
+/* ---------- Shortlist bar ---------- */
+.shortlist-bar{position:fixed;bottom:0;left:0;right:0;background:var(--panel);border-top:1px solid var(--accent);padding:10px 24px;display:none;align-items:center;gap:10px;z-index:500;flex-wrap:wrap;backdrop-filter:blur(10px)}
+.shortlist-bar.on{display:flex}
+.shortlist-bar-label{font-size:12px;font-weight:500;color:var(--accent);font-family:'Inter'}
+.shortlist-chips{display:flex;gap:6px;flex:1;flex-wrap:wrap}
+.sl-chip{background:var(--panel3);border:1px solid var(--line);border-radius:20px;padding:4px 10px;font-size:11px;display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono'}
+.sl-chip button{background:none;border:none;color:var(--t3);cursor:pointer;font-size:14px;line-height:1}
+
+/* ---------- Compare modal ---------- */
+.compare-table{width:100%;border-collapse:collapse;font-size:12px}
+.compare-table th{text-align:left;padding:10px 12px;background:var(--panel2);font-size:10px;color:var(--t3);font-family:'JetBrains Mono';text-transform:uppercase;letter-spacing:.05em;font-weight:500;white-space:nowrap;border-bottom:1px solid var(--line)}
+.compare-table td{padding:10px 12px;border-bottom:1px dashed var(--line);vertical-align:top;font-family:'JetBrains Mono';white-space:nowrap;color:var(--t2)}
+.compare-table tr:hover td{background:var(--panel2)}
+.compare-table .best{color:var(--good);font-weight:700}
+
+/* ---------- Pagination ---------- */
+.pagination{display:flex;gap:5px;justify-content:center;margin-top:18px;flex-wrap:wrap;align-items:center;padding:18px 0 80px}
+.page-btn{background:var(--panel);border:1px solid var(--line);color:var(--t2);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-family:'JetBrains Mono';min-width:34px;height:30px;display:inline-flex;align-items:center;justify-content:center;transition:.15s}
+.page-btn:hover:not(:disabled){background:var(--panel2);color:var(--t1);border-color:var(--line2)}
+.page-btn.on{background:var(--accent);color:#0a0d12;border-color:var(--accent);font-weight:600}
+.page-btn:disabled{opacity:.35;cursor:not-allowed}
+.page-info{font-size:12px;color:var(--t3);margin:0 6px;font-family:'JetBrains Mono';display:inline-flex;align-items:center;gap:6px}
+.page-jump{width:56px;background:var(--panel2);border:1px solid var(--line);color:var(--t1);padding:4px 6px;border-radius:6px;text-align:center;font-family:'JetBrains Mono';font-size:12px}
+.page-jump:focus{outline:none;border-color:var(--accent)}
+
+/* ---------- Map page ---------- */
+.fullmap-container{padding:18px 24px;display:flex;flex-direction:column;gap:14px;height:calc(100vh - 170px)}
+.map-header-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.fullmap-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;color:var(--t1)}
+.fullmap-subtitle{font-size:11px;color:var(--t3);margin-top:2px}
+.map-toolbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto}
+.map-btn{padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--t2);cursor:pointer;font-size:12px;display:inline-flex;align-items:center;gap:6px;font-family:inherit;transition:.15s}
+.map-btn:hover{color:var(--t1);border-color:var(--line2)}
+.map-btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+
+.map-grid{display:grid;grid-template-columns:1fr 360px;gap:18px;flex:1;min-height:0}
+@media(max-width:980px){.map-grid{grid-template-columns:1fr;height:auto}}
+.map-col{display:flex;flex-direction:column;gap:12px;min-height:0}
+#fullmap{flex:1;border-radius:14px;border:1px solid var(--line);min-height:520px;background:var(--panel);height:100%}
+.mleg{display:flex;align-items:center;gap:14px;padding:8px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;font-size:11px;font-family:'JetBrains Mono';flex-wrap:wrap;color:var(--t2)}
+.ld{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:3px;vertical-align:middle}
+.leaflet-map-select{cursor:crosshair!important}
+
+.map-aside{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;overflow-y:auto;max-height:100%;display:flex;flex-direction:column;min-height:0}
+.map-aside::-webkit-scrollbar{width:6px}
+.map-aside::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+.map-aside-title{font-size:11px;font-family:'JetBrains Mono';color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;font-weight:500;flex-shrink:0}
+.map-aside-sub{color:var(--t3);font-size:10px;text-transform:none;letter-spacing:0}
+.mini-list{display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1}
+.mini-list::-webkit-scrollbar{width:6px}
+.mini-list::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+
+.miniresult{padding:10px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer;transition:.15s;display:flex;gap:10px;align-items:center}
+.miniresult:hover{border-color:var(--line2);background:var(--panel2)}
+.miniresult.active{border-color:var(--accent);background:var(--accent-soft)}
+.miniring{flex-shrink:0;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-family:'JetBrains Mono';font-size:13px;font-weight:600;border:2px solid;background:var(--bg)}
+.mini-name{flex:1;min-width:0}
+.mini-name b{font-size:12px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--t1)}
+.mini-name span{font-size:10px;color:var(--t3);font-family:'JetBrains Mono';display:block;margin-top:2px}
+.mini-price{font-family:'JetBrains Mono';font-size:11px;color:var(--accent);flex-shrink:0;font-weight:600}
+
+/* ---------- Calc page ---------- */
+.fullcalc-container{padding:24px;max-width:1100px;margin:0 auto}
+.fullcalc-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:18px}
+@media(max-width:880px){.fullcalc-grid{grid-template-columns:1fr}}
+.calc-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
+.calc-panel h3{font-size:11px;font-weight:600;color:var(--t3);font-family:'JetBrains Mono';text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.calc-panel h3::before{content:"//";color:var(--accent)}
+.calc-lf{margin-bottom:12px}
+.calc-lf label{display:block;font-size:11px;color:var(--t3);margin-bottom:5px;font-family:'JetBrains Mono'}
+.calc-lf input,.calc-lf select{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 11px;color:var(--t1);font-size:13px;font-family:'JetBrains Mono'}
+.calc-lf input:focus,.calc-lf select:focus{outline:none;border-color:var(--accent)}
+.calc-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.calc-id-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px}
+.id-btn{padding:10px 8px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--t2);cursor:pointer;font-size:12px;font-family:inherit;transition:.15s}
+.id-btn:hover{border-color:var(--line2);color:var(--t1)}
+.id-btn.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+
+.cost-table{width:100%}
+.cost-table tr td{display:table-cell;padding:10px 0;border-bottom:1px dashed var(--line);font-size:13px;color:var(--t2);vertical-align:middle}
+.cost-table tr:last-child td{border-bottom:none}
+.cost-table tr td:last-child{text-align:right;font-family:'JetBrains Mono';font-weight:500;color:var(--t1)}
+.cost-table tr.tr-total td{padding:14px 0;border-top:1px solid var(--line2);border-bottom:none;font-weight:600}
+.cost-table tr.tr-total td:last-child{color:var(--accent);font-size:16px}
+.cost-table .ok{color:var(--good)!important}
+.cost-table .warn{color:var(--bad)!important}
+.calc-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.metric{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px 12px;text-align:center}
+.metric .v{font-family:'JetBrains Mono';font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--t1);display:block}
+.metric .l{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;font-family:'JetBrains Mono';margin-top:3px}
+
+.absd-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}
+.absd-table th{text-align:left;font-size:10px;color:var(--t3);padding:10px 8px;border-bottom:1px solid var(--line);font-family:'JetBrains Mono';text-transform:uppercase;letter-spacing:.05em;font-weight:500}
+.absd-table th:not(:first-child){text-align:right}
+.absd-table td{padding:10px 8px;border-bottom:1px dashed var(--line);font-family:'JetBrains Mono';font-size:12px;color:var(--t2)}
+.absd-table td:first-child{color:var(--t2)}
+.absd-table td:not(:first-child){text-align:right;font-weight:500}
+.absd-table .hw{color:var(--bad)!important;font-weight:500}
+.absd-table tr.current-id{background:var(--accent-soft)}
+.absd-table tr.current-id td:first-child{color:var(--accent);font-weight:600;border-left:2px solid var(--accent)}
+.rules-body{font-size:12px;color:var(--t2);line-height:2;margin-top:14px;padding:12px;background:var(--panel2);border-radius:8px;border-left:2px solid var(--accent)}
+.rules-body strong{color:var(--accent)}
+
+/* ---------- Modals ---------- */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:1000;padding:16px;backdrop-filter:blur(4px)}
+.modal.on{display:flex}
+.modal-body{background:var(--panel);border:1px solid var(--line2);border-radius:14px;padding:22px;max-width:740px;width:100%;max-height:88vh;overflow-y:auto}
+.modal-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:16px}
+.modal-close{background:none;border:none;color:var(--t2);font-size:22px;cursor:pointer;padding:0;line-height:1}
+.modal-close:hover{color:var(--t1)}
+
+.score-dim{background:var(--panel2);border-radius:10px;padding:14px;margin-bottom:10px;border-left:3px solid var(--line2)}
+.score-dim.price{border-left-color:var(--info)}
+.score-dim.history{border-left-color:var(--good)}
+.score-dim.mrt{border-left-color:var(--warn)}
+.score-dim.workplace{border-left-color:var(--info)}
+.score-dim.age{border-left-color:var(--purple)}
+.score-dim.school{border-left-color:var(--purple)}
+.score-dim-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;gap:8px}
+.score-dim-name{font-size:13px;font-weight:500}
+.score-dim-val{font-size:22px;font-weight:600;font-family:'JetBrains Mono'}
+.score-dim-detail{font-size:12px;color:var(--t2);line-height:1.7}
+.score-dim-compare{background:var(--panel);padding:8px 10px;border-radius:6px;margin-top:8px;font-size:11px;font-family:'JetBrains Mono';color:var(--t2);line-height:1.7}
+.compare-row{display:flex;justify-content:space-between;padding:1px 0}
+.score-dim-formula{font-size:10px;color:var(--t3);margin-top:6px;font-style:italic}
+.score-dim-rationale{font-size:11px;color:var(--t2);margin-top:6px;padding:6px 8px;background:var(--accent-soft);border-radius:6px;border-left:2px solid var(--accent)}
+.weight-calc{background:var(--panel2);padding:14px;border-radius:8px;margin-top:14px;font-size:12px;color:var(--t2);line-height:1.8;font-family:'JetBrains Mono'}
+.weight-calc-line{display:flex;justify-content:space-between}
+.weight-calc-total{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:15px;font-weight:600;color:var(--accent)}
+.trend-chart{margin:12px 0}
+.trend-row{display:grid;grid-template-columns:75px 1fr 100px 55px;gap:8px;padding:5px 0;font-size:11px;border-bottom:1px solid var(--line);font-family:'JetBrains Mono'}
+.trend-bar{background:var(--panel3);border-radius:3px;height:18px;overflow:hidden}
+.trend-bar-fill{height:100%;transition:width .3s}
+
+/* Sidebar mobile toggle */
+.sidebar-toggle{display:none;width:100%;background:transparent;border:none;border-bottom:1px solid var(--line);padding:10px 24px;color:var(--t2);font-size:13px;cursor:pointer;text-align:left}
+.sidebar-toggle:hover{background:var(--panel2)}
+@media(max-width:900px){.sidebar-toggle{display:block}.sidebar{display:none;padding:14px}.sidebar.open{display:block}}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel3);border:1px solid var(--line2);padding:10px 16px;border-radius:8px;font-size:12px;z-index:1000;opacity:0;pointer-events:none;transition:.25s;color:var(--t1)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(-4px)}
+
+/* Leaflet dark tweaks */
+.leaflet-container{background:#0d1117 !important;font-family:'Inter',sans-serif !important}
+.leaflet-control-attribution{background:rgba(0,0,0,.5) !important;color:var(--t3) !important;font-size:9px !important}
+.leaflet-control-attribution a{color:var(--t2) !important}
+.leaflet-control-zoom a{background:var(--panel) !important;color:var(--t2) !important;border-color:var(--line) !important}
+.leaflet-popup-content-wrapper{background:var(--panel2) !important;color:var(--t1) !important;border-radius:10px !important;border:1px solid var(--line2)}
+.leaflet-popup-tip{background:var(--panel2) !important}
+</style>
+<body>
+<div class="loading-overlay" id="loader">
+  <div class="loading-title">🏙 <span>SG</span> Condo Finder</div>
+  <div class="loading-bar"><div class="loading-bar-fill" id="loader-bar"></div></div>
+  <div class="loading-stage" id="loader-stage" data-i18n="loader.start">启动中...</div>
+  <div class="loading-text" id="loader-text"></div>
+  <div style="font-size:11px;color:var(--text3);margin-top:8px;font-family:'DM Mono',monospace" data-i18n="loader.mobile">手机首次加载约 10-30 秒，请耐心等待</div>
+</div>
+
+<div class="header">
+  <div class="logo">SG<span>Condo</span></div>
+  <div class="search-wrap">
+    <input type="text" class="search-input" id="search-box" placeholder="搜索楼盘 / 地铁站 / 街道..." data-i18n="header.search.placeholder" autocomplete="off">
+    <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+    <div class="search-suggest" id="suggest-box"></div>
+  </div>
+  <div class="header-actions">
+    <span class="pill" id="data-status" data-i18n="header.status.loading">加载中</span>
+    <button class="icon-btn" id="lang-btn" onclick="toggleLanguage()" title="Switch language / 切换语言" style="font-family:'DM Mono',monospace;min-width:40px">EN</button>
+    <button class="icon-btn" onclick="document.getElementById('settings-modal').classList.add('on')" title="Menu">⚙️</button>
+    <span class="pill green" style="display:none" id="sl-count-pill"></span>
+  </div>
+</div>
+
+<div class="search-tag" id="search-tag-wrap"><div class="search-tag-pill" id="search-tag-pill"></div></div>
+
+<!-- Top-level tab navigation -->
+<div class="top-tabs">
+  <button class="top-tab on" id="tt-search" onclick="switchPage('search')" data-i18n="tabs.search">🔍 搜索 & 筛选</button>
+  <button class="top-tab" id="tt-map" onclick="switchPage('map')" data-i18n="tabs.map">🗺 地图视图</button>
+  <button class="top-tab" id="tt-calc" onclick="switchPage('calc')" data-i18n="tabs.calc">🧮 贷款计算器</button>
+</div>
+
+<!-- PAGE: Search & filter -->
+<div class="page-panel on" id="page-search">
+
+<!-- Goal bar -->
+<div class="goal-bar">
+  <span class="goal-label" data-i18n="goal.label">目标：</span>
+  <button class="goal-btn" onclick="setGoal('commute',this)" data-i18n="goal.commute">🏠 自住通勤</button>
+  <button class="goal-btn" onclick="setGoal('school',this)" data-i18n="goal.school">🎓 学区</button>
+  <button class="goal-btn" onclick="setGoal('invest',this)" data-i18n="goal.invest">📈 投资</button>
+  <button class="goal-btn" onclick="setGoal('dip',this)" data-i18n="goal.dip">📉 抄底</button>
+  <button class="goal-btn on" onclick="setGoal('new',this)" data-i18n="goal.new">✨ 新房</button>
+  <button class="goal-btn" onclick="setGoal('balanced',this)" data-i18n="goal.balanced">⚖️ 均衡</button>
+</div>
+
+<button class="sidebar-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">
+  ☰ 筛选条件 &amp; 权重设置
+</button>
+
+<div class="main-layout">
+  <!-- Sidebar: filters -->
+  <div class="sidebar">
+    <div id="status-msg"></div>
+
+    <!-- Live filter status (auto-updates) -->
+    <div class="filter-live-status" id="filter-live-status">
+      <span class="filter-live-dot"></span>
+      <span data-i18n="filter.autoApply">Filters apply automatically</span>
+    </div>
+
+    <!-- Current goal echo -->
+    <div class="goal-echo" id="goal-echo">
+      <span class="goal-echo-label" data-i18n="sidebar.goalEcho">当前目标：</span>
+      <span class="goal-echo-value" id="goal-echo-value">✨ New Launch</span>
+    </div>
+
+    <!-- Budget -->
+    <div class="filter-section">
+      <div class="filter-section-title" style="color:var(--blue)" data-i18n="budget.title">💰 预算范围</div>
+      <div class="price-row">
+        <input type="number" class="f" id="fpMin" placeholder="最低价" step="50000" data-i18n="budget.min">
+        <span>—</span>
+        <input type="number" class="f" id="fpMax" placeholder="最高价" step="50000" data-i18n="budget.max">
+      </div>
+      <div class="price-presets">
+        <button class="price-preset-btn" onclick="setPricePreset(0,800000,this)">≤800K</button>
+        <button class="price-preset-btn on" onclick="setPricePreset(1000000,1500000,this)">1M-1.5M</button>
+        <button class="price-preset-btn" onclick="setPricePreset(1500000,2000000,this)">1.5M-2M</button>
+        <button class="price-preset-btn" onclick="setPricePreset(2000000,3000000,this)">2M-3M</button>
+        <button class="price-preset-btn" onclick="setPricePreset(0,0,this)" data-i18n="budget.preset.all">全部</button>
+      </div>
+    </div>
+
+    <!-- Basic filters -->
+    <div class="filter-section">
+      <div class="filter-section-title basic" style="color:var(--text2)" data-i18n="basic.title">🔍 基础条件</div>
+      <div class="f"><label data-i18n="basic.rooms">房型</label><select id="fr"><option value="0" data-i18n="basic.rooms.all">全部房型</option><option value="1" data-i18n="basic.rooms.1">1室</option><option value="2" data-i18n="basic.rooms.2">2室</option><option value="3" selected data-i18n="basic.rooms.3">3室</option><option value="4" data-i18n="basic.rooms.4">4室</option><option value="5" data-i18n="basic.rooms.5">5室+</option></select></div>
+      <div class="f"><label data-i18n="basic.region">地段</label><select id="fd"><option value="all" data-i18n="basic.region.all">全部区域</option><option value="CCR" data-i18n="basic.region.ccr">CCR（核心中区）</option><option value="RCR" data-i18n="basic.region.rcr">RCR（中环区）</option><option value="OCR" data-i18n="basic.region.ocr">OCR（外围区）</option></select></div>
+      <div class="f"><label data-i18n="basic.mrt">🚇 最近地铁站距离</label><select id="fmrt"><option value="0" data-i18n="basic.mrt.any">不限</option><option value="3" data-i18n="basic.mrt.3">≤3分钟步行</option><option value="5" data-i18n="basic.mrt.5">≤5分钟步行</option><option value="10" data-i18n="basic.mrt.10">≤10分钟步行</option><option value="15" data-i18n="basic.mrt.15">≤15分钟步行</option></select></div>
+    </div>
+
+    <!-- Workplace -->
+    <div class="filter-section">
+      <div class="filter-section-title commute" style="color:var(--cyan)" data-i18n="wp.title" title="Pick your workplace - affects commute score ranking">🏢 通勤地点</div>
+      <div class="wp-presets-stack" id="wp-presets"></div>
+      <div class="f" style="margin-top:4px">
+        <label data-i18n="wp.custom">自定义坐标（精确地址）</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+          <input type="number" id="wp-lat" step="0.0001" placeholder="纬度 1.28...">
+          <input type="number" id="wp-lng" step="0.0001" placeholder="经度 103.8...">
+        </div>
+        <button class="btn" onclick="applyCustomWorkplace()" style="width:100%;padding:7px;font-size:11px" data-i18n="wp.use">使用</button>
+      </div>
+    </div>
+
+    <!-- Advanced (collapsed) -->
+    <button class="adv-toggle" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.adv-arrow').textContent=this.nextElementSibling.classList.contains('open')?'▴':'▾'">
+      <span data-i18n="adv.title">更多筛选条件</span><span class="adv-arrow" style="color:var(--text3)">▾</span>
+    </button>
+    <div class="adv-panel">
+      <div class="f"><label data-i18n="adv.ptype">物业类型</label><select id="ft"><option value="" data-i18n="adv.ptype.all">全部</option><option value="Condominium" selected>Condo</option><option value="Apartment">Apartment</option><option value="Executive Condominium">EC</option></select></div>
+      <div class="f"><label data-i18n="adv.age">楼龄上限</label><select id="fa"><option value="0" data-i18n="adv.age.any">不限</option><option value="5" data-i18n="adv.age.5">≤5年（新盘）</option><option value="10" data-i18n="adv.age.10">≤10年</option><option value="20" data-i18n="adv.age.20">≤20年</option><option value="30" data-i18n="adv.age.30">≤30年</option></select></div>
+      <div class="f"><label data-i18n="adv.commute">🏢 通勤时间上限</label><select id="fwp"><option value="0" data-i18n="adv.commute.any">不限</option><option value="20" data-i18n="adv.commute.20">≤20分钟</option><option value="30" data-i18n="adv.commute.30">≤30分钟</option><option value="45" data-i18n="adv.commute.45">≤45分钟</option><option value="60" data-i18n="adv.commute.60">≤60分钟</option></select></div>
+      <div class="f"><label data-i18n="adv.school">🎓 Top 小学范围</label><select id="fsch"><option value="0" data-i18n="adv.school.any">不限</option><option value="1" data-i18n="adv.school.1">1km 内有 Top 学区</option><option value="2" data-i18n="adv.school.2">2km 内有 Top 学区</option></select></div>
+      <div class="f"><label data-i18n="adv.stype">成交类型</label><select id="fs"><option value="" data-i18n="adv.stype.all">全部</option><option value="Resale" data-i18n="adv.stype.resale">Resale 二手</option><option value="New Sale" data-i18n="adv.stype.new">New Sale 新盘</option></select></div>
+      <div class="f"><label data-i18n="adv.time">成交时间范围</label><select id="fm"><option value="3" data-i18n="adv.time.3">近3个月</option><option value="6" selected data-i18n="adv.time.6">近6个月</option><option value="12" data-i18n="adv.time.12">近12个月</option><option value="0" data-i18n="adv.time.0">全部历史</option></select></div>
+    </div>
+
+    <div class="filter-actions">
+      <button class="btn" onclick="resetF()" style="flex:1" data-i18n="btn.reset">重置</button>
+    </div>
+    <div class="map-filter-tag" id="map-filter-tag-sidebar" style="margin-top:8px;display:none">
+      <span data-i18n="map.filterTag">📍 已框选地图区域</span> <button onclick="clearMapFilter()">×</button>
+    </div>
+    <div style="font-size:11px;color:var(--t3);font-family:'JetBrains Mono';margin-top:8px;text-align:center" id="stats-brief"></div>
+  </div>
+
+  <!-- Results area -->
+  <div class="results-area">
+    <div class="sort-row">
+      <div class="view-toggle">
+        <button id="vt-proj" class="on" onclick="switchView('proj')" data-i18n="view.project">楼盘</button>
+        <button id="vt-tx" onclick="switchView('tx')" data-i18n="view.tx">成交</button>
+      </div>
+      <select id="so" onchange="render()"></select>
+      <select id="page-size" onchange="onPageSizeChange()">
+        <option value="20" data-i18n="pageSize.20">20条</option>
+        <option value="50" selected data-i18n="pageSize.50">50条</option>
+        <option value="100" data-i18n="pageSize.100">100条</option>
+      </select>
+      <span class="cnt" id="cnt"></span>
+    </div>
+    <div class="results" id="rl"><div class="empty" data-i18n="list.loading">加载中...</div></div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+  <!-- Right rail: weights tuner -->
+  <aside class="weights-rail">
+    <div class="weights-banner">
+      <h5>⚖️ <span data-i18n="weights.banner.title">Tune your match</span></h5>
+      <p data-i18n-html="weights.banner.body">Adjust the 6 dimensions below — your total score recalculates instantly. Current preset: <b id="weights-banner-preset">New Launch</b>.</p>
+    </div>
+
+    <div class="weight-item"><div class="weight-row"><span class="weight-label" data-i18n="weight.price">💰 房价</span><span class="weight-val" id="wv-price">12</span></div><input type="range" id="w-price" min="0" max="100" value="12" oninput="onWeightChange()"></div>
+    <div class="weight-item"><div class="weight-row"><span class="weight-label" data-i18n="weight.history">📈 历史</span><span class="weight-val" id="wv-history">12</span></div><input type="range" id="w-history" min="0" max="100" value="12" oninput="onWeightChange()"></div>
+    <div class="weight-item"><div class="weight-row"><span class="weight-label" data-i18n="weight.mrt">🚇 地铁</span><span class="weight-val" id="wv-mrt">12</span></div><input type="range" id="w-mrt" min="0" max="100" value="12" oninput="onWeightChange()"></div>
+    <div class="weight-item"><div class="weight-row"><span class="weight-label" data-i18n="weight.workplace">🏢 通勤</span><span class="weight-val" id="wv-workplace">12</span></div><input type="range" id="w-workplace" min="0" max="100" value="12" oninput="onWeightChange()"></div>
+    <div class="weight-item"><div class="weight-row"><span class="weight-label" data-i18n="weight.age">🏗 楼龄</span><span class="weight-val" id="wv-age">35</span></div><input type="range" id="w-age" min="0" max="100" value="35" oninput="onWeightChange()"></div>
+    <div class="weight-item"><div class="weight-row"><span class="weight-label" data-i18n="weight.school">🎓 学区</span><span class="weight-val" id="wv-school">17</span></div><input type="range" id="w-school" min="0" max="100" value="17" oninput="onWeightChange()"></div>
+
+    <div class="weight-sum-row"><span style="color:var(--t3)" data-i18n="weight.sum">Total</span><span id="wsum">100</span></div>
+
+    <div class="weight-presets">
+      <button class="preset-btn" onclick="setPreset('balanced',this)" data-i18n="weight.preset.balanced">均衡</button>
+      <button class="preset-btn" onclick="setPreset('value',this)" data-i18n="weight.preset.value">性价比</button>
+      <button class="preset-btn" onclick="setPreset('commute',this)" data-i18n="weight.preset.commute">通勤</button>
+      <button class="preset-btn" onclick="setPreset('school',this)" data-i18n="weight.preset.school">学区</button>
+      <button class="preset-btn on" onclick="setPreset('new',this)" data-i18n="weight.preset.new">新房</button>
+      <button class="preset-btn" onclick="setPreset('dip',this)" data-i18n="weight.preset.dip">抄底</button>
+    </div>
+
+    <button class="map-btn" style="width:100%;justify-content:center;margin-top:14px" onclick="setPreset('new',document.querySelector('.preset-btn[onclick*=\\'new\\']'))">↺ Reset to balanced</button>
+  </aside>
+</div>
+
+</div><!-- /page-search -->
+
+<!-- PAGE: Map -->
+<div class="page-panel" id="page-map">
+  <div class="fullmap-container">
+    <div class="map-header-row">
+      <div>
+        <div class="fullmap-title" data-i18n="map.title">🗺 地图视图</div>
+        <div class="fullmap-subtitle" data-i18n="map.subtitle">点击标记查看详情 · 拖拽框选 · 颜色 = 总分</div>
+      </div>
+      <div class="map-toolbar">
+        <button class="map-btn" id="map-load-btn" onclick="loadMapData()" data-i18n="map.load">🔄 加载当前结果</button>
+        <button class="map-btn" id="map-select-btn" onclick="toggleMapSelectMode()" data-i18n="map.select">⬚ 框选筛选区域</button>
+        <div class="map-filter-tag" id="map-filter-tag">
+          <span data-i18n="map.filterTag">📍 地图框选中</span> <button onclick="clearMapFilter()">×</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="map-grid">
+      <div class="map-col">
+        <div class="mleg" id="mleg"></div>
+        <div id="fullmap"><div class="empty" style="padding-top:8rem">点击「🔄 加载当前结果」开始</div></div>
+      </div>
+      <aside class="map-aside">
+        <h4 class="map-aside-title">
+          <span data-i18n="map.aside.title">视图内 Top 楼盘</span>
+          <span class="map-aside-sub mono" data-i18n="map.aside.sub">按总分排序</span>
+        </h4>
+        <div id="miniList" class="mini-list"></div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: Loan Calculator -->
+<div class="page-panel" id="page-calc">
+  <div class="fullcalc-container">
+    <div style="margin-bottom:20px">
+      <div style="font-size:18px;font-weight:600;margin-bottom:4px">🧮 贷款计算器</div>
+      <div style="font-size:12px;color:var(--text3)">按 Singapore 2026 税率规则：ABSD + BSD + CPF 使用 + 月供 + 总利息</div>
+    </div>
+
+    <div class="fullcalc-grid">
+      <div>
+        <div class="calc-panel">
+          <h3>// 输入信息</h3>
+
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;font-family:'DM Mono',monospace;margin-bottom:6px">购买者身份</div>
+          <div class="calc-id-btns">
+            <button class="id-btn" data-id="sc" onclick="setIdentity('sc',this)">🇸🇬 公民</button>
+            <button class="id-btn on" data-id="pr" onclick="setIdentity('pr',this)">🏠 PR</button>
+            <button class="id-btn" data-id="fn" onclick="setIdentity('fn',this)">🌐 外国人</button>
+          </div>
+
+          <div class="calc-grid2">
+            <div class="calc-lf"><label>房价 (SGD)</label><input type="number" id="cp" value="1500000" step="50000" oninput="calc()"></div>
+            <div class="calc-lf"><label>第几套？</label><select id="cn" onchange="calc()"><option value="1">第 1 套</option><option value="2">第 2 套</option><option value="3">第 3 套+</option></select></div>
+            <div class="calc-lf"><label>物业类型</label><select id="ctp" onchange="calc()"><option value="p">私宅 Condo</option><option value="e">EC</option></select></div>
+            <div class="calc-lf"><label>贷款年限</label><input type="number" id="ctn" value="25" min="5" max="30" oninput="calc()"></div>
+            <div class="calc-lf"><label>利率 (%)</label><input type="number" id="cr" value="1.65" step="0.05" oninput="calc()"></div>
+            <div class="calc-lf" id="cpf-wrap"><label>CPF-OA 使用 ($)</label><input type="number" id="cc" value="100000" step="10000" oninput="calc()"></div>
+          </div>
+
+          <div style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.7">
+            💡 LTV 默认 75%（新加坡规则），现金首付至少 5%。外国人不能使用 CPF，也不能买 EC。
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="calc-panel">
+          <h3>// 成本明细</h3>
+          <table class="cost-table" id="ctbl"></table>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px" id="mr"></div>
+        </div>
+
+        <div class="calc-panel" style="margin-top:16px">
+          <h3>// 身份对比（2026 ABSD 税率）</h3>
+          <table class="absd-table" id="absd-ref-table">
+            <tr><th>身份</th><th>第1套</th><th>第2套</th><th>第3+套</th></tr>
+            <tr id="absd-row-sc"><td>🇸🇬 公民</td><td style="color:var(--green)">0%</td><td>20%</td><td>30%</td></tr>
+            <tr id="absd-row-pr"><td>🏠 PR</td><td>5%</td><td class="hw">30%</td><td class="hw">35%</td></tr>
+            <tr id="absd-row-fn"><td>🌐 外国人</td><td class="hw">60%</td><td class="hw">60%</td><td class="hw">60%</td></tr>
+          </table>
+          <div class="rules-body" id="rules-body"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Shortlist bar -->
+<div class="shortlist-bar" id="shortlist-bar">
+  <span class="shortlist-bar-label" data-i18n="sl.label">对比清单</span>
+  <div class="shortlist-chips" id="shortlist-chips"></div>
+  <button class="btn btn-accent" onclick="showCompareModal()" style="white-space:nowrap" data-i18n="sl.compare">横向对比 →</button>
+  <button class="btn" onclick="clearShortlist()" data-i18n="sl.clear">清空</button>
+</div>
+
+<!-- Score detail modal -->
+<div class="modal" id="score-modal" onclick="if(event.target===this)closeModal('score-modal')">
+  <div class="modal-body"><div class="modal-head"><div><div style="font-size:16px;font-weight:500" id="score-mod-title"></div><div style="font-size:11px;color:var(--text2)" id="score-mod-sub"></div></div><button class="modal-close" onclick="closeModal('score-modal')">×</button></div><div id="score-mod-body"></div></div>
+</div>
+
+<!-- Trend modal -->
+<div class="modal" id="trend-modal" onclick="if(event.target===this)closeModal('trend-modal')">
+  <div class="modal-body"><div class="modal-head"><div><div style="font-size:16px;font-weight:500" id="mod-title"></div><div style="font-size:11px;color:var(--text2)" id="mod-sub"></div></div><button class="modal-close" onclick="closeModal('trend-modal')">×</button></div><div id="mod-body"></div></div>
+</div>
+
+<!-- Help modal -->
+<div class="modal" id="help-modal" onclick="if(event.target===this)closeModal('help-modal')">
+  <div class="modal-body">
+    <div class="modal-head"><div style="font-size:16px;font-weight:500">📊 六维评分系统</div><button class="modal-close" onclick="closeModal('help-modal')">×</button></div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.8">
+      <p style="margin-bottom:12px">6 维独立打分 0-100，按权重加权。默认各约 17%，可在侧边栏调整。</p>
+      <div class="score-dim price"><div class="score-dim-head"><div class="score-dim-name">💰 房价合理度</div></div><div style="font-size:12px;color:var(--text2)">同区域 CCR/RCR/OCR 分桶比较。<span style="font-size:11px;color:var(--text3)">100 − (你的PSF/区域中位 − 1) × 200</span></div></div>
+      <div class="score-dim history"><div class="score-dim-head"><div class="score-dim-name">📈 历史趋势</div></div><div style="font-size:12px;color:var(--text2)">12月 PSF 变化：平稳=85，轻跌=90（买方机会），过热=40</div></div>
+      <div class="score-dim mrt"><div class="score-dim-head"><div class="score-dim-name">🚇 地铁距离</div></div><div style="font-size:12px;color:var(--text2)">步行：≤3分=100, ≤5=90, ≤10=65, >20=10</div></div>
+      <div class="score-dim workplace"><div class="score-dim-head"><div class="score-dim-name">🏢 通勤距离</div></div><div style="font-size:12px;color:var(--text2)">直线×2.5系数估算公交通勤分钟。≤15=100, ≤25=85, ≤45=50, >60=15</div></div>
+      <div class="score-dim age"><div class="score-dim-head"><div class="score-dim-name">🏗 楼龄</div></div><div style="font-size:12px;color:var(--text2)">≤5年=95, ≤10=85, ≤20=70, freehold=70（显示最早成交年做参考）</div></div>
+      <div class="score-dim school"><div class="score-dim-head"><div class="score-dim-name">🎓 Top 小学学区</div></div><div style="font-size:12px;color:var(--text2)">Top 30 小学。1km内=100, 1-2km=70, 2km+=40。新加坡小一报名1km优先原则。</div></div>
+      <p style="margin-top:16px;font-size:12px;padding:10px;background:var(--bg3);border-radius:var(--r)">💡 选一个"目标"（顶部按钮）会自动调整权重。也可以在侧边栏手动调节 6 个滑块。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Compare modal -->
+<div class="modal" id="compare-modal" onclick="if(event.target===this)closeModal('compare-modal')">
+  <div class="modal-body" style="max-width:900px">
+    <div class="modal-head"><div style="font-size:16px;font-weight:500">📊 对比清单</div><button class="modal-close" onclick="closeModal('compare-modal')">×</button></div>
+    <div id="compare-body" style="overflow-x:auto"></div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="modal" id="settings-modal" onclick="if(event.target===this)closeModal('settings-modal')">
+  <div class="modal-body" style="max-width:500px">
+    <div class="modal-head"><div style="font-size:16px;font-weight:500">⚙️ 快捷入口</div><button class="modal-close" onclick="closeModal('settings-modal')">×</button></div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.9">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:14px">快速跳转到其他页面：</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button onclick="closeModal('settings-modal');switchPage('search')" class="btn" style="justify-content:flex-start;text-align:left;padding:10px 14px">🔍 搜索 &amp; 筛选</button>
+        <button onclick="closeModal('settings-modal');switchPage('map')" class="btn" style="justify-content:flex-start;text-align:left;padding:10px 14px">🗺 地图视图（支持框选筛选）</button>
+        <button onclick="closeModal('settings-modal');switchPage('calc')" class="btn" style="justify-content:flex-start;text-align:left;padding:10px 14px">🧮 贷款计算器（公民 / PR / 外国人）</button>
+        <button onclick="closeModal('settings-modal');showHelp()" class="btn" style="justify-content:flex-start;text-align:left;padding:10px 14px">💡 评分逻辑说明</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ========== I18n 多语言 ==========
+const TRANSLATIONS = {
+  en: {
+    // Header
+    'header.search.placeholder': 'Search project / MRT / street...',
+    'header.status.loading': 'Loading',
+    'header.status.txs': 'txs',
+    'header.btn.settings': 'Menu',
+    'header.btn.lang': '中文',
+    // Top tabs
+    'tabs.search': '🔍 Search & Filter',
+    'tabs.map': '🗺 Map View',
+    'tabs.calc': '🧮 Loan Calculator',
+    // Goal bar
+    'goal.label': 'Goal:',
+    'goal.commute': '🏠 Live & Commute',
+    'goal.school': '🎓 School Zone',
+    'goal.invest': '📈 Investment',
+    'goal.dip': '📉 Value Buy',
+    'goal.new': '✨ New Launch',
+    'goal.balanced': '⚖️ Balanced',
+    // Sidebar - intro
+    'sidebar.intro.title': '⚡ Build your perfect match',
+    'sidebar.intro.body': 'Filter by budget, commute, school zone, tenure, and more. The 6-dimension score adapts to your chosen goal.',
+    'sidebar.intro.hint': '💡 Tip: Expand "Score Weights" below to fine-tune how each dimension counts toward the total score.',
+    'sidebar.intro.dismiss': 'Got it',
+    'sidebar.goalEcho': 'Current goal: ',
+    'filter.autoApply': 'Auto-applies on change',
+    'filter.searching': 'Searching...',
+    // Sidebar - budget
+    'budget.title': '💰 Budget Range',
+    'budget.min': 'Min price',
+    'budget.max': 'Max price',
+    'budget.preset.all': 'All',
+    // Sidebar - basic
+    'basic.title': '🔍 Basic Filters',
+    'basic.rooms': 'Rooms',
+    'basic.rooms.all': 'All room types',
+    'basic.rooms.1': '1 BR',
+    'basic.rooms.2': '2 BR',
+    'basic.rooms.3': '3 BR',
+    'basic.rooms.4': '4 BR',
+    'basic.rooms.5': '5 BR+',
+    'basic.region': 'Region',
+    'basic.region.all': 'All regions',
+    'basic.region.ccr': 'CCR (Core Central)',
+    'basic.region.rcr': 'RCR (Rest of Central)',
+    'basic.region.ocr': 'OCR (Outside Central)',
+    'basic.mrt': '🚇 Nearest MRT Distance',
+    'basic.mrt.any': 'No limit',
+    'basic.mrt.3': '≤3 min walk',
+    'basic.mrt.5': '≤5 min walk',
+    'basic.mrt.10': '≤10 min walk',
+    'basic.mrt.15': '≤15 min walk',
+    // Sidebar - workplace
+    'wp.title': '🏢 Workplace',
+    'wp.desc': 'Pick your work location. Affects commute score ranking.',
+    'wp.custom': 'Custom coordinates (exact)',
+    'wp.use': 'Use',
+    // Advanced
+    'adv.title': 'More filters',
+    'adv.ptype': 'Property type',
+    'adv.ptype.all': 'All',
+    'adv.age': 'Max age',
+    'adv.age.any': 'No limit',
+    'adv.age.5': '≤5 yrs (new)',
+    'adv.age.10': '≤10 yrs',
+    'adv.age.20': '≤20 yrs',
+    'adv.age.30': '≤30 yrs',
+    'adv.commute': '🏢 Max commute time',
+    'adv.commute.any': 'No limit',
+    'adv.commute.20': '≤20 min',
+    'adv.commute.30': '≤30 min',
+    'adv.commute.45': '≤45 min',
+    'adv.commute.60': '≤60 min',
+    'adv.school': '🎓 Top School proximity',
+    'adv.school.any': 'No limit',
+    'adv.school.1': 'Within 1km',
+    'adv.school.2': 'Within 2km',
+    'adv.stype': 'Sale type',
+    'adv.stype.all': 'All',
+    'adv.stype.resale': 'Resale',
+    'adv.stype.new': 'New Sale',
+    'adv.time': 'Time range',
+    'adv.time.3': 'Last 3 months',
+    'adv.time.6': 'Last 6 months',
+    'adv.time.12': 'Last 12 months',
+    'adv.time.0': 'All history',
+    // Weights
+    'weight.title': '⚖️ Score Weights',
+    'weights.banner.title': 'Tune your match',
+    'weights.banner.body': 'Adjust the 6 dimensions below — your total score recalculates instantly. Current preset: <b id="weights-banner-preset">New Launch</b>.',
+    'weight.subtitle': 'Adjust by personal preference',
+    'weight.summary.balanced': 'Balanced',
+    'weight.summary.value': 'Value',
+    'weight.summary.commute': 'Commute',
+    'weight.summary.school': 'School',
+    'weight.summary.new': 'New',
+    'weight.summary.dip': 'Value Buy',
+    'weight.price': '💰 Price',
+    'weight.history': '📈 History',
+    'weight.mrt': '🚇 MRT',
+    'weight.workplace': '🏢 Commute',
+    'weight.age': '🏗 Age',
+    'weight.school': '🎓 School',
+    'weight.sum': 'Total',
+    'weight.preset.balanced': 'Balanced',
+    'weight.preset.value': 'Value',
+    'weight.preset.commute': 'Commute',
+    'weight.preset.school': 'School',
+    'weight.preset.new': 'New',
+    'weight.preset.dip': 'Value Buy',
+    // Actions
+    'btn.search': 'Apply ↗',
+    'btn.reset': 'Reset',
+    'map.filterTag': '📍 Map area selected',
+    // Sort row
+    'view.project': 'Projects',
+    'view.tx': 'Transactions',
+    'sort.score': 'Total Score',
+    'sort.yield': 'Rental Yield (high→low)',
+    'sort.school': 'School (nearest)',
+    'sort.workplace': 'Commute (nearest)',
+    'sort.mrt': 'MRT (nearest)',
+    'sort.count': 'Transaction count',
+    'sort.price.asc': 'Median Price (low)',
+    'sort.price.desc': 'Median Price (high)',
+    'sort.psf': 'PSF (low)',
+    'sort.pa': 'Price (low→high)',
+    'sort.pd': 'Price (high→low)',
+    'sort.new': 'Newest',
+    'pageSize.20': '20 per page',
+    'pageSize.50': '50 per page',
+    'pageSize.100': '100 per page',
+    'list.empty': 'No results match your filters',
+    'list.loading': 'Loading...',
+    'list.projects': 'projects',
+    'list.txs': 'txs',
+    'list.page': 'Page',
+    'list.of': 'of',
+    // Card
+    'card.score.unit': 'score',
+    'card.score.hint': 'Click to see breakdown',
+    'card.commute': 'Commute',
+    'card.age.freehold': 'Freehold',
+    'card.age.oldestTx': 'earliest tx',
+    'card.age.suffix': 'yrs old',
+    'card.school.within1km': 'School',
+    'card.ext.property': '🏠 Listings:',
+    'card.ext.reviews': '💬 Reviews:',
+    'card.detail.medianPrice': 'Median Price',
+    'card.detail.priceRange': 'Price Range',
+    'card.detail.medianPsf': 'Median PSF',
+    'card.detail.txCount': 'Recent Txs',
+    'card.mrt.title': '🚇 Nearest MRT',
+    'card.school.title': 'Top School',
+    'card.school.within': 'Top school zone (1km has N schools)',
+    'card.school.nearest': 'Nearest Top school',
+    'card.school.none': 'No Top school within 2km',
+    'card.school.moreSchools': 'and N more',
+    'card.recentTx.title': 'Recent transactions',
+    'card.trendLink': '→ View full price trend',
+    // Shortlist
+    'sl.label': 'Compare list',
+    'sl.compare': 'Compare →',
+    'sl.clear': 'Clear',
+    'sl.count': 'Compare N',
+    'sl.max': 'Maximum 4 projects',
+    'sl.needTwo': 'Please select at least 2 projects to compare',
+    // Compare modal
+    'compare.title': '📊 Compare',
+    'compare.metric': 'Metric',
+    'compare.legend': 'Green bold = best in row',
+    'compare.medianPrice': 'Median Price',
+    'compare.medianPsf': 'Median PSF',
+    'compare.txCount': 'Tx Count',
+    'compare.mrt': '🚇 MRT',
+    'compare.commute': '🏢 Commute',
+    'compare.yield': 'Yield',
+    'compare.school': '🎓 Top School',
+    'compare.tenure': 'Tenure',
+    'compare.region': 'Region',
+    'compare.score': 'Total Score',
+    'compare.priceScore': '💰 Price Score',
+    'compare.historyScore': '📈 History Score',
+    'compare.mrtScore': '🚇 MRT Score',
+    'compare.workplaceScore': '🏢 Commute Score',
+    'compare.ageScore': '🏗 Age Score',
+    'compare.schoolScore': '🎓 School Score',
+    // Map page
+    'map.title': '🗺 Map View',
+    'map.subtitle': 'Click marker for details · Drag to draw selection · Color = total score',
+    'map.aside.title': 'Top within view',
+    'map.aside.sub': 'sorted by score',
+    'map.load': '🔄 Load current results',
+    'map.select': '⬚ Draw selection area',
+    'map.selectCancel': '✕ Cancel selection',
+    'map.noResults': '⚠ No results match',
+    'map.legend.high': '≥80',
+    'map.legend.mid': '65-79',
+    'map.legend.low': '<65',
+    'map.legend.workplace': '💼 Workplace',
+    'map.total': 'total',
+    'map.inBox': 'in box',
+    'map.jumpToList': '→ Jump to list',
+    'map.workplace': 'Workplace',
+    'map.placeholder': 'Click "🔄 Load current results" to start',
+    'map.fail': 'Map init failed',
+    // Calc page
+    'calc.title': '🧮 Loan Calculator',
+    'calc.subtitle': 'Singapore 2026 rules: ABSD + BSD + CPF usage + monthly payment + total interest',
+    'calc.input': '// Input',
+    'calc.identity': 'Buyer identity',
+    'calc.id.sc': '🇸🇬 Citizen',
+    'calc.id.pr': '🏠 PR',
+    'calc.id.fn': '🌐 Foreigner',
+    'calc.price': 'Price (SGD)',
+    'calc.nth': 'Which property?',
+    'calc.nth.1': '1st property',
+    'calc.nth.2': '2nd property',
+    'calc.nth.3': '3rd+ property',
+    'calc.ptype': 'Property type',
+    'calc.ptype.private': 'Private Condo',
+    'calc.ptype.ec': 'EC',
+    'calc.years': 'Loan years',
+    'calc.rate': 'Interest rate (%)',
+    'calc.cpf': 'CPF-OA use ($)',
+    'calc.hint': '💡 LTV default 75% (Singapore rule), min 5% cash down. Foreigners cannot use CPF or buy EC.',
+    'calc.cost': '// Cost breakdown',
+    'calc.cost.price': 'Price',
+    'calc.cost.loan': 'Loan (75%)',
+    'calc.cost.down': 'Down payment (25%)',
+    'calc.cost.cash': '— Cash',
+    'calc.cost.cpf': '— CPF-OA',
+    'calc.cost.cpfNA': '—(not available to foreigners)',
+    'calc.cost.bsd': 'BSD',
+    'calc.cost.absd': 'ABSD',
+    'calc.cost.ecExempt': ' (EC exempt)',
+    'calc.cost.legal': 'Legal fee',
+    'calc.cost.total': 'Total cash to enter',
+    'calc.label.1st': '1st',
+    'calc.label.2nd': '2nd',
+    'calc.label.3rd': '3rd+',
+    'calc.metric.monthly': 'Monthly',
+    'calc.metric.interest': 'yr interest',
+    'calc.metric.totalCash': 'Cash to enter',
+    'calc.compare': '// Identity comparison (2026 ABSD rates)',
+    'calc.compare.id': 'Identity',
+    // Calc rules per identity
+    'calc.rules.sc': '• Down payment <strong>25%</strong> (≥5% cash)<br>• Citizen 1st property <strong>ABSD waived</strong>, 2nd 20%, 3rd+ 30%<br>• CPF-OA usable for down payment<br>• Can buy HDB<br>• 2026 private rate <strong>1.4%–1.8%</strong>',
+    'calc.rules.pr': '• Down payment <strong>25%</strong> (≥5% cash)<br>• PR 1st property <strong>ABSD 5%</strong>, 2nd 30%, 3rd+ 35%<br>• CPF-OA usable<br>• <strong>Cannot apply HDB loan</strong>; EC has ABSD exemption<br>• 2026 private rate <strong>1.4%–1.8%</strong>',
+    'calc.rules.fn': '• Down payment <strong>25%</strong> (≥5% cash)<br>• Foreigner <strong>ABSD 60% flat</strong>  (any property count)<br>• <strong>CPF-OA not usable</strong><br>• Cannot buy HDB, EC<br>• SSD applies (sell within 3 years)<br>• 2026 private rate <strong>1.4%–1.8%</strong>',
+    // Score modal
+    'score.title.suffix': ' · Score breakdown',
+    'score.weight': 'weight',
+    'score.dim.price': '💰 Price fairness',
+    'score.dim.history': '📈 Historical trend',
+    'score.dim.mrt': '🚇 MRT distance',
+    'score.dim.workplace': '🏢 Commute (workplace)',
+    'score.dim.age': '🏗 Age',
+    'score.dim.school': '🎓 Top School Zone',
+    'score.price.against': 'Benchmark',
+    'score.price.sample': 'samples',
+    'score.price.yourPrice': 'Your price',
+    'score.price.medianPrice': 'Region median price',
+    'score.price.diff': 'Difference',
+    'score.price.yourPsf': 'Your PSF',
+    'score.price.medianPsf': 'Region median PSF',
+    'score.history.trend': '12-month PSF change',
+    'score.history.nodata': 'Insufficient data',
+    'score.mrt.nearest': 'Nearest MRT',
+    'score.mrt.walk': 'Walk time',
+    'score.mrt.straight': 'Straight distance',
+    'score.workplace.label': 'Workplace',
+    'score.workplace.distance': 'Straight distance',
+    'score.workplace.minutes': 'Est. commute',
+    'score.age.tenure': 'Tenure',
+    'score.age.age': 'Age',
+    'score.age.earliestTx': 'Earliest tx year (TOP reference)',
+    'score.age.bucket': 'Bucket',
+    'score.school.nearest': 'Nearest Top school',
+    'score.school.none': 'None (>2km)',
+    'score.school.distance': 'Distance',
+    'score.school.within1km': 'Top schools within 1km',
+    'score.school.count': 'schools',
+    'score.formula': '📐 Formula',
+    'score.rationale': '💡',
+    'score.total': '// Weighted total calculation',
+    'score.totalLabel': 'Total Score',
+    // Help modal
+    'help.title': '📊 Six-Dimension Scoring',
+    'help.intro': '6 independent scores (0-100), weighted. Each ≈17% by default.',
+    'help.tip': '💡 Pick a "Goal" (top bar) to auto-adjust weights. Or manually tune via sliders in sidebar.',
+    // Settings modal
+    'settings.title': '⚙️ Quick Menu',
+    'settings.desc': 'Jump to other pages:',
+    'settings.search': '🔍 Search & Filter',
+    'settings.map': '🗺 Map View (supports area selection)',
+    'settings.calc': '🧮 Loan Calculator (Citizen / PR / Foreigner)',
+    'settings.help': '💡 Scoring methodology',
+    // Loader
+    'loader.title': 'SG Condo Finder',
+    'loader.start': 'Starting...',
+    'loader.parse': 'Parsing MRT data...',
+    'loader.index': 'Building project index...',
+    'loader.ready': 'Ready...',
+    'loader.done': 'Done!',
+    'loader.mobile': 'First load on mobile takes 10-30s, please wait',
+    // Status messages
+    'status.ok': 'txs',
+    'status.ms': 'ms',
+    'status.wp': 'workplace',
+    // Misc
+    'status.search': '🔍',
+    'dim.price.bucket.fair': 'Fair',
+    'dim.mrt.bucket.close': 'Close',
+    'dim.noTopSchool': '2km+ no Top school',
+    'dim.topNearby': '1km inside ✨',
+    'dim.top12km': '1-2km range',
+    // rent
+    'rent.title': '💵 Rental / Sales Ratio',
+    'rent.yield': 'Gross Yield',
+    'rent.pr': 'P/R Ratio (yrs)',
+    'rent.annualRent': 'Est Annual Rent',
+    'rent.medianRent': 'Median Rent',
+    'rent.nodata': 'No rental data',
+    'rent.nodataNote': 'URA only publishes rentals with ≥10 contracts',
+    'rent.vs': 'vs',
+    'rent.districtMedian': 'district median',
+    // Compare row best
+    'compare.best': 'best'
+  },
+  zh: {
+    // Header
+    'header.search.placeholder': '搜索楼盘 / 地铁站 / 街道...',
+    'header.status.loading': '加载中',
+    'header.status.txs': '笔',
+    'header.btn.settings': '菜单',
+    'header.btn.lang': 'EN',
+    // Top tabs
+    'tabs.search': '🔍 搜索 & 筛选',
+    'tabs.map': '🗺 地图视图',
+    'tabs.calc': '🧮 贷款计算器',
+    // Goal bar
+    'goal.label': '目标：',
+    'goal.commute': '🏠 自住通勤',
+    'goal.school': '🎓 学区',
+    'goal.invest': '📈 投资',
+    'goal.dip': '📉 抄底',
+    'goal.new': '✨ 新房',
+    'goal.balanced': '⚖️ 均衡',
+    // Sidebar - intro
+    'sidebar.intro.title': '⚡ 定制你的匹配条件',
+    'sidebar.intro.body': '按预算、通勤、学区、楼龄等筛选。6 维评分会根据你选的目标自动调权重。',
+    'sidebar.intro.hint': '💡 提示：展开下方「评分权重」可按个人喜好微调每个维度的重要性。',
+    'sidebar.intro.dismiss': '知道了',
+    'sidebar.goalEcho': '当前目标：',
+    'filter.autoApply': '条件变化自动应用',
+    'filter.searching': '搜索中...',
+    // Sidebar - budget
+    'budget.title': '💰 预算范围',
+    'budget.min': '最低价',
+    'budget.max': '最高价',
+    'budget.preset.all': '全部',
+    // Sidebar - basic
+    'basic.title': '🔍 基础条件',
+    'basic.rooms': '房型',
+    'basic.rooms.all': '全部房型',
+    'basic.rooms.1': '1室',
+    'basic.rooms.2': '2室',
+    'basic.rooms.3': '3室',
+    'basic.rooms.4': '4室',
+    'basic.rooms.5': '5室+',
+    'basic.region': '地段',
+    'basic.region.all': '全部区域',
+    'basic.region.ccr': 'CCR（核心中区）',
+    'basic.region.rcr': 'RCR（中环区）',
+    'basic.region.ocr': 'OCR（外围区）',
+    'basic.mrt': '🚇 最近地铁站距离',
+    'basic.mrt.any': '不限',
+    'basic.mrt.3': '≤3分钟步行',
+    'basic.mrt.5': '≤5分钟步行',
+    'basic.mrt.10': '≤10分钟步行',
+    'basic.mrt.15': '≤15分钟步行',
+    // Sidebar - workplace
+    'wp.title': '🏢 通勤地点',
+    'wp.desc': '选择你的工作地点，影响通勤评分排序',
+    'wp.custom': '自定义坐标（精确地址）',
+    'wp.use': '使用',
+    // Advanced
+    'adv.title': '更多筛选条件',
+    'adv.ptype': '物业类型',
+    'adv.ptype.all': '全部',
+    'adv.age': '楼龄上限',
+    'adv.age.any': '不限',
+    'adv.age.5': '≤5年（新盘）',
+    'adv.age.10': '≤10年',
+    'adv.age.20': '≤20年',
+    'adv.age.30': '≤30年',
+    'adv.commute': '🏢 通勤时间上限',
+    'adv.commute.any': '不限',
+    'adv.commute.20': '≤20分钟',
+    'adv.commute.30': '≤30分钟',
+    'adv.commute.45': '≤45分钟',
+    'adv.commute.60': '≤60分钟',
+    'adv.school': '🎓 Top 小学范围',
+    'adv.school.any': '不限',
+    'adv.school.1': '1km 内有 Top 学区',
+    'adv.school.2': '2km 内有 Top 学区',
+    'adv.stype': '成交类型',
+    'adv.stype.all': '全部',
+    'adv.stype.resale': 'Resale 二手',
+    'adv.stype.new': 'New Sale 新盘',
+    'adv.time': '成交时间范围',
+    'adv.time.3': '近3个月',
+    'adv.time.6': '近6个月',
+    'adv.time.12': '近12个月',
+    'adv.time.0': '全部历史',
+    // Weights
+    'weight.title': '⚖️ 评分权重',
+    'weights.banner.title': '调节匹配度',
+    'weights.banner.body': '调整下方 6 个维度 — 总分会立即重新计算。当前预设：<b id="weights-banner-preset">新房优先</b>。',
+    'weight.subtitle': '按个人喜好调整',
+    'weight.summary.balanced': '均衡',
+    'weight.summary.value': '性价比',
+    'weight.summary.commute': '通勤',
+    'weight.summary.school': '学区',
+    'weight.summary.new': '新房',
+    'weight.summary.dip': '抄底',
+    'weight.price': '💰 房价',
+    'weight.history': '📈 历史',
+    'weight.mrt': '🚇 地铁',
+    'weight.workplace': '🏢 通勤',
+    'weight.age': '🏗 楼龄',
+    'weight.school': '🎓 学区',
+    'weight.sum': '总和',
+    'weight.preset.balanced': '均衡',
+    'weight.preset.value': '性价比',
+    'weight.preset.commute': '通勤',
+    'weight.preset.school': '学区',
+    'weight.preset.new': '新房',
+    'weight.preset.dip': '抄底',
+    // Actions
+    'btn.search': '筛选 ↗',
+    'btn.reset': '重置',
+    'map.filterTag': '📍 已框选地图区域',
+    // Sort row
+    'view.project': '楼盘',
+    'view.tx': '成交',
+    'sort.score': '总评分',
+    'sort.yield': '租金回报高→低',
+    'sort.school': '学区最近',
+    'sort.workplace': '通勤最近',
+    'sort.mrt': '地铁最近',
+    'sort.count': '成交笔数',
+    'sort.price.asc': '中位价（低）',
+    'sort.price.desc': '中位价（高）',
+    'sort.psf': '中位 PSF（低）',
+    'sort.pa': '价格从低',
+    'sort.pd': '价格从高',
+    'sort.new': '最新成交',
+    'pageSize.20': '20条',
+    'pageSize.50': '50条',
+    'pageSize.100': '100条',
+    'list.empty': '无符合条件的楼盘',
+    'list.loading': '加载中...',
+    'list.projects': '楼盘',
+    'list.txs': '笔',
+    'list.page': '第',
+    'list.of': '/',
+    // Card
+    'card.score.unit': '分',
+    'card.score.hint': '点击查看拆解',
+    'card.commute': '通勤',
+    'card.age.freehold': '永久地契',
+    'card.age.oldestTx': '最早成交',
+    'card.age.suffix': '年楼龄',
+    'card.school.within1km': '学区',
+    'card.ext.property': '🏠 看房：',
+    'card.ext.reviews': '💬 看评价：',
+    'card.detail.medianPrice': '中位成交价',
+    'card.detail.priceRange': '成交区间',
+    'card.detail.medianPsf': '中位 PSF',
+    'card.detail.txCount': '近期成交',
+    'card.mrt.title': '🚇 最近 MRT',
+    'card.school.title': 'Top 学区',
+    'card.school.within': 'Top 学区 (1km 内有 N 所)',
+    'card.school.nearest': '最近 Top 小学',
+    'card.school.none': '2km 外无 Top 小学',
+    'card.school.moreSchools': '…还有 N 所',
+    'card.recentTx.title': '近期成交记录',
+    'card.trendLink': '→ 查看完整价格走势',
+    // Shortlist
+    'sl.label': '对比清单',
+    'sl.compare': '横向对比 →',
+    'sl.clear': '清空',
+    'sl.count': '对比 N',
+    'sl.max': '最多对比 4 个楼盘',
+    'sl.needTwo': '请先勾选至少 2 个楼盘再对比',
+    // Compare modal
+    'compare.title': '📊 对比清单',
+    'compare.metric': '指标',
+    'compare.legend': '绿色粗体 = 该项最优',
+    'compare.medianPrice': '中位价',
+    'compare.medianPsf': '中位 PSF',
+    'compare.txCount': '成交笔数',
+    'compare.mrt': '🚇 地铁',
+    'compare.commute': '🏢 通勤',
+    'compare.yield': '租金回报',
+    'compare.school': '🎓 Top学区',
+    'compare.tenure': '租约',
+    'compare.region': '区域',
+    'compare.score': '总评分',
+    'compare.priceScore': '💰 房价分',
+    'compare.historyScore': '📈 历史分',
+    'compare.mrtScore': '🚇 地铁分',
+    'compare.workplaceScore': '🏢 通勤分',
+    'compare.ageScore': '🏗 楼龄分',
+    'compare.schoolScore': '🎓 学区分',
+    // Map page
+    'map.title': '🗺 地图视图',
+    'map.subtitle': '点击标记查看详情 · 拖拽框选 · 颜色 = 总分',
+    'map.aside.title': '视图内 Top 楼盘',
+    'map.aside.sub': '按总分排序',
+    'map.load': '🔄 加载当前结果',
+    'map.select': '⬚ 框选筛选区域',
+    'map.selectCancel': '✕ 取消框选',
+    'map.noResults': '⚠ 当前筛选无结果',
+    'map.legend.high': '≥80',
+    'map.legend.mid': '65-79',
+    'map.legend.low': '<65',
+    'map.legend.workplace': '💼 工作地',
+    'map.total': '共',
+    'map.inBox': '框选内',
+    'map.jumpToList': '→ 跳转到列表',
+    'map.workplace': '工作地',
+    'map.placeholder': '点击「🔄 加载当前结果」开始',
+    'map.fail': '地图初始化失败',
+    // Calc page
+    'calc.title': '🧮 贷款计算器',
+    'calc.subtitle': '按 Singapore 2026 税率规则：ABSD + BSD + CPF 使用 + 月供 + 总利息',
+    'calc.input': '// 输入信息',
+    'calc.identity': '购买者身份',
+    'calc.id.sc': '🇸🇬 公民',
+    'calc.id.pr': '🏠 PR',
+    'calc.id.fn': '🌐 外国人',
+    'calc.price': '房价 (SGD)',
+    'calc.nth': '第几套？',
+    'calc.nth.1': '第 1 套',
+    'calc.nth.2': '第 2 套',
+    'calc.nth.3': '第 3 套+',
+    'calc.ptype': '物业类型',
+    'calc.ptype.private': '私宅 Condo',
+    'calc.ptype.ec': 'EC',
+    'calc.years': '贷款年限',
+    'calc.rate': '利率 (%)',
+    'calc.cpf': 'CPF-OA 使用 ($)',
+    'calc.hint': '💡 LTV 默认 75%（新加坡规则），现金首付至少 5%。外国人不能使用 CPF，也不能买 EC。',
+    'calc.cost': '// 成本明细',
+    'calc.cost.price': '房价',
+    'calc.cost.loan': '贷款 (75%)',
+    'calc.cost.down': '首付 (25%)',
+    'calc.cost.cash': '— 现金',
+    'calc.cost.cpf': '— CPF-OA',
+    'calc.cost.cpfNA': '—（外国人不可用）',
+    'calc.cost.bsd': 'BSD',
+    'calc.cost.absd': 'ABSD',
+    'calc.cost.ecExempt': ' (EC豁免)',
+    'calc.cost.legal': '律师费',
+    'calc.cost.total': '入场现金',
+    'calc.label.1st': '首套',
+    'calc.label.2nd': '第2套',
+    'calc.label.3rd': '第3+套',
+    'calc.metric.monthly': '月供',
+    'calc.metric.interest': '年利息',
+    'calc.metric.totalCash': '入场现金',
+    'calc.compare': '// 身份对比（2026 ABSD 税率）',
+    'calc.compare.id': '身份',
+    // Calc rules per identity
+    'calc.rules.sc': '• 首付 <strong>25%</strong>（≥5% 现金）<br>• 公民首套 <strong>ABSD 免除</strong>，第2套 20%，第3+ 30%<br>• 可用 CPF-OA 抵扣首付<br>• 可买 HDB<br>• 2026 私宅利率 <strong>1.4%–1.8%</strong>',
+    'calc.rules.pr': '• 首付 <strong>25%</strong>（≥5% 现金）<br>• PR 首套 <strong>ABSD 5%</strong>，第2套 30%，第3+ 35%<br>• 可用 CPF-OA 抵扣首付<br>• <strong>不可申 HDB 贷款</strong>；EC 有 ABSD 豁免条件<br>• 2026 私宅利率 <strong>1.4%–1.8%</strong>',
+    'calc.rules.fn': '• 首付 <strong>25%</strong>（≥5% 现金）<br>• 外国人 <strong>ABSD 60% 一刀切</strong>（不分第几套）<br>• <strong>不能用 CPF-OA</strong><br>• 不可买 HDB、EC<br>• 需缴 Seller Stamp Duty（3年内卖出）<br>• 2026 私宅利率 <strong>1.4%–1.8%</strong>',
+    // Score modal
+    'score.title.suffix': ' · 评分拆解',
+    'score.weight': '权重',
+    'score.dim.price': '💰 房价合理度',
+    'score.dim.history': '📈 历史趋势',
+    'score.dim.mrt': '🚇 地铁距离',
+    'score.dim.workplace': '🏢 通勤（工作地）',
+    'score.dim.age': '🏗 楼龄',
+    'score.dim.school': '🎓 Top 小学学区',
+    'score.price.against': '对比基准',
+    'score.price.sample': '样本',
+    'score.price.yourPrice': '你的成交价',
+    'score.price.medianPrice': '同区域中位价',
+    'score.price.diff': '差距',
+    'score.price.yourPsf': '你的 PSF',
+    'score.price.medianPsf': '同区域中位 PSF',
+    'score.history.trend': '12月 PSF 变化',
+    'score.history.nodata': '数据不足',
+    'score.mrt.nearest': '最近 MRT',
+    'score.mrt.walk': '步行时间',
+    'score.mrt.straight': '直线距离',
+    'score.workplace.label': '工作地',
+    'score.workplace.distance': '直线距离',
+    'score.workplace.minutes': '预估通勤',
+    'score.age.tenure': 'tenure',
+    'score.age.age': '楼龄',
+    'score.age.earliestTx': '最早成交年（TOP 参考）',
+    'score.age.bucket': '落在区间',
+    'score.school.nearest': '最近 Top 小学',
+    'score.school.none': '无（2km 外）',
+    'score.school.distance': '距离',
+    'score.school.within1km': '1km 内 Top 小学数量',
+    'score.school.count': '所',
+    'score.formula': '📐',
+    'score.rationale': '💡',
+    'score.total': '// 加权总分计算',
+    'score.totalLabel': '总评分',
+    // Help modal
+    'help.title': '📊 六维评分系统',
+    'help.intro': '6 维独立打分 0-100，按权重加权。默认各约 17%。',
+    'help.tip': '💡 选一个"目标"（顶部按钮）会自动调整权重。也可以在侧边栏手动调节 6 个滑块。',
+    // Settings modal
+    'settings.title': '⚙️ 快捷入口',
+    'settings.desc': '快速跳转到其他页面：',
+    'settings.search': '🔍 搜索 & 筛选',
+    'settings.map': '🗺 地图视图（支持框选筛选）',
+    'settings.calc': '🧮 贷款计算器（公民 / PR / 外国人）',
+    'settings.help': '💡 评分逻辑说明',
+    // Loader
+    'loader.title': 'SG Condo Finder',
+    'loader.start': '启动中...',
+    'loader.parse': '解析 MRT 数据...',
+    'loader.index': '构建楼盘索引...',
+    'loader.ready': '准备就绪...',
+    'loader.done': '完成！',
+    'loader.mobile': '手机首次加载约 10-30 秒，请耐心等待',
+    // Status messages
+    'status.ok': '笔',
+    'status.ms': 'ms',
+    'status.wp': '通勤起点',
+    // Misc
+    'status.search': '🔍',
+    'dim.price.bucket.fair': '合理',
+    'dim.mrt.bucket.close': '很近',
+    'dim.noTopSchool': '2km 外无 Top 小学',
+    'dim.topNearby': '1km 内有 ✨',
+    'dim.top12km': '1-2km 范围',
+    // rent
+    'rent.title': '💵 租售比',
+    'rent.yield': '毛租金回报率',
+    'rent.pr': 'P/R 比（年）',
+    'rent.annualRent': '估年租金',
+    'rent.medianRent': '租金中位',
+    'rent.nodata': '暂无租金数据',
+    'rent.nodataNote': 'URA 仅公布有 ≥10 笔租赁合同的楼盘数据',
+    'rent.vs': 'vs',
+    'rent.districtMedian': '中位 Yield',
+    // Compare row best
+    'compare.best': '最优'
+  }
+};
+
+let _currentLang = 'en';
+function detectLang() {
+  const saved = localStorage.getItem('sg_lang');
+  if (saved === 'en' || saved === 'zh') return saved;
+  const b = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
+  return b.startsWith('zh') ? 'zh' : 'en';
+}
+function t(key, fallback) {
+  return TRANSLATIONS[_currentLang]?.[key] ?? fallback ?? key;
+}
+function setLanguage(lang) {
+  if (lang !== 'en' && lang !== 'zh') return;
+  _currentLang = lang;
+  localStorage.setItem('sg_lang', lang);
+  applyI18nToStatic();
+  // Update lang toggle button text
+  const btn = document.getElementById('lang-btn');
+  if (btn) btn.textContent = t('header.btn.lang');
+  // Re-render dynamic content
+  if (STATE.currentResults?.length) {
+    render();
+  }
+  // Update sort options (they get regenerated per view)
+  const so = document.getElementById('so');
+  if (so && STATE.viewMode) {
+    so.innerHTML = SORT_OPTS_I18N[STATE.viewMode]().map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
+  }
+  // Update status, weights summary, loader
+  updateWeightsSummary();
+  updateGoalEcho();
+  // Settings modal button labels (text nodes)
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    const translated = t(key);
+    if (el.tagName === 'INPUT' && (el.type === 'number' || el.type === 'text')) {
+      el.placeholder = translated;
+    } else {
+      el.textContent = translated;
+    }
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.dataset.i18nHtml;
+    el.innerHTML = t(key);
+  });
+}
+function applyI18nToStatic() {
+  document.documentElement.setAttribute('lang', _currentLang === 'zh' ? 'zh' : 'en');
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    const translated = t(key);
+    if (el.tagName === 'INPUT' && (el.type === 'number' || el.type === 'text')) {
+      el.placeholder = translated;
+    } else {
+      el.textContent = translated;
+    }
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.dataset.i18nHtml;
+    el.innerHTML = t(key);
+  });
+}
+function toggleLanguage() {
+  setLanguage(_currentLang === 'en' ? 'zh' : 'en');
+}
+
+// Sort options are generated dynamically to support language change
+const SORT_OPTS_I18N = {
+  proj: () => [
+    ['score', t('sort.score')],
+    ['yield', t('sort.yield')],
+    ['school', t('sort.school')],
+    ['workplace', t('sort.workplace')],
+    ['mrt', t('sort.mrt')],
+    ['count', t('sort.count')],
+    ['price', t('sort.price.asc')],
+    ['price-desc', t('sort.price.desc')],
+    ['psf', t('sort.psf')]
+  ],
+  tx: () => [
+    ['score', t('sort.score')],
+    ['yield', t('sort.yield')],
+    ['school', t('sort.school')],
+    ['workplace', t('sort.workplace')],
+    ['mrt', t('sort.mrt')],
+    ['pa', t('sort.pa')],
+    ['pd', t('sort.pd')],
+    ['psf', t('sort.psf')],
+    ['new', t('sort.new')]
+  ]
+};
+
+// ========== 内嵌数据 ==========
+const EMBEDDED_DATA = /*__EMBEDDED_DATA_PLACEHOLDER__*/;
+
+// ========== 工作地点预设（新加坡 8 大商圈） ==========
+const WORKPLACE_PRESETS = [
+  { id: 'cbd', label: 'CBD/Raffles', lat: 1.2839, lng: 103.8513, short: 'Raffles Place' },
+  { id: 'marina', label: 'Marina Bay', lat: 1.2817, lng: 103.8589, short: 'Marina Bay' },
+  { id: 'orchard', label: 'Orchard', lat: 1.3041, lng: 103.8320, short: 'Orchard' },
+  { id: 'jurong', label: 'Jurong E.', lat: 1.3332, lng: 103.7421, short: 'Jurong East' },
+  { id: 'paya_lebar', label: 'Paya Lebar Q.', lat: 1.3180, lng: 103.8927, short: 'Paya Lebar' },
+  { id: 'changi', label: 'Changi', lat: 1.3574, lng: 103.9888, short: 'Changi Business Park' },
+  { id: 'one_north', label: 'one-north', lat: 1.2998, lng: 103.7874, short: 'one-north' },
+  { id: 'woodlands', label: 'Woodlands', lat: 1.4370, lng: 103.7865, short: 'Woodlands Regional Centre' }
+];
+
+// ========== 全局状态 ==========
+const STATE = {
+  rawTransactions: EMBEDDED_DATA.transactions,
+  mrt: {},
+  rental: EMBEDDED_DATA.rental || {},           // 楼盘名 -> {m: 月租, p: 季度, t: 趋势}
+  districtMedianRent: EMBEDDED_DATA.districtMedianRent || {},   // 区号 -> 中位月租
+  schools: EMBEDDED_DATA.schools || {},          // 楼盘名 -> {n: 最近Top小学, m: 距离, w: 1km内列表}
+  topSchoolsList: EMBEDDED_DATA.topSchoolsList || [],
+  transactionsByProject: null,
+  projectEarliestTxYear: {},       // 楼盘名 -> 最早成交年份（freehold 用）
+  projectTrends: {},
+  allStreets: [],
+  allProjects: [],
+  mrtStationIndex: {},
+  currentResults: [],
+  projectResults: [],
+  viewMode: 'proj',
+  currentPage: 1,
+  pageSize: 50,
+  activeSearch: null,
+  map: null,
+  markers: [],
+  workplaceMarker: null,
+  workplace: { id: 'cbd', label: 'CBD/Raffles Place', lat: 1.2839, lng: 103.8513 },
+  priceRange: { min: 1000000, max: 1500000 },
+  identity: 'pr',  // 'sc' | 'pr' | 'fn'
+  shortlist: new Set(),  // project names in compare shortlist
+  mapBBox: null,         // {north, south, east, west} when map filter active
+  mapSelectMode: false
+};
+
+const SORT_OPTS = {proj:[['score','总评分'],['yield','租金回报高→低'],['school','学区最近'],['workplace','通勤最近'],['mrt','地铁最近'],['count','成交笔数'],['price','中位价（低）'],['price-desc','中位价（高）'],['psf','中位 PSF（低）']],tx:[['score','总评分'],['yield','租金回报高→低'],['school','学区最近'],['workplace','通勤最近'],['mrt','地铁最近'],['pa','价格从低'],['pd','价格从高'],['psf','PSF 从低'],['new','最新成交']]};
+// 6 维度: [price, history, mrt, workplace, age, school]
+const PRESETS = {
+  balanced: [17,17,17,17,16,16],
+  value:    [35,20,10,10,10,15],
+  commute:  [12,10,12,40,12,14],
+  location: [12,10,28,20,10,20],
+  new:      [12,12,12,12,35,17],
+  dip:      [28,38,8,8,8,10],
+  school:   [15,10,12,12,10,41]
+};
+
+function setLoader(pct, stage, text){document.getElementById('loader-bar').style.width=pct+'%';document.getElementById('loader-stage').textContent=stage;document.getElementById('loader-text').textContent=text||''}
+function hideLoader(){document.getElementById('loader').classList.add('hidden')}
+
+function parseContractDate(d){if(!d||d.length!==4)return null;return`20${d.substring(2,4)}-${d.substring(0,2)}`}
+function calcAge(t){
+  if(!t) return null;
+  const m = t.match(/from (\d{4})/);
+  if(m) return 2026 - parseInt(m[1]);
+  // freehold has no age - return null
+  if(t.toLowerCase().includes('freehold')) return null;
+  return null;
+}
+function estimateBedrooms(a){const s=a*10.7639;if(s<600)return 1;if(s<850)return 2;if(s<1200)return 3;if(s<1600)return 4;return 5}
+
+// Haversine 直线距离（米）
+function haversine(lat1, lng1, lat2, lng2) {
+  if (!lat1 || !lng1 || !lat2 || !lng2) return null;
+  const R = 6371000;
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLng = (lng2-lng1) * Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
+// 直线距离 → 通勤分钟（公共交通）
+// 新加坡公共交通平均 25 km/h，实际路径约直线 2.5 倍
+function commuteMinutes(distanceMeters) {
+  if (distanceMeters === null || distanceMeters === undefined) return null;
+  // distance km × 2.5 系数 / 25 km/h = 小时 → × 60 分钟
+  // 再加 5 分钟固定（步行进地铁站 + 等车）
+  const minutes = Math.round((distanceMeters * 2.5 / 1000) / 25 * 60 + 5);
+  return minutes;
+}
+
+function transformTx(t){
+  const price = parseInt(t.pr);
+  const areaSqm = parseFloat(t.a);
+  const sqft = areaSqm * 10.7639;
+  const psf = Math.round(price / sqft);
+  const rooms = estimateBedrooms(areaSqm);
+  const age = calcAge(t.te);
+  const month = parseContractDate(t.cd);
+  const mrtInfo = STATE.mrt[t.p] || null;
+  const nearest = mrtInfo?.nearest?.[0] || null;
+
+  let workplaceMeters = null, workplaceMinutes = null;
+  if (mrtInfo?.lat && mrtInfo?.lng && STATE.workplace) {
+    workplaceMeters = haversine(mrtInfo.lat, mrtInfo.lng, STATE.workplace.lat, STATE.workplace.lng);
+    workplaceMinutes = commuteMinutes(workplaceMeters);
+  }
+
+  // 租售比指标
+  const rentalInfo = STATE.rental[t.p] || null;
+  let monthlyRent = null, annualRent = null, grossYield = null, prRatio = null;
+  let districtMedianYield = null;
+  if (rentalInfo && rentalInfo.m > 0) {
+    monthlyRent = rentalInfo.m;
+    annualRent = monthlyRent * 12;
+    grossYield = parseFloat((annualRent / price * 100).toFixed(2));  // %
+    prRatio = parseFloat((price / annualRent).toFixed(1));            // 年数
+  }
+  // 同区域中位 yield（用区号的中位租金 / 这个 tx 的价格）
+  const districtMedRent = STATE.districtMedianRent[t.d];
+  if (districtMedRent) {
+    districtMedianYield = parseFloat((districtMedRent * 12 / price * 100).toFixed(2));
+  }
+
+  // 学区信息
+  const schoolInfo = STATE.schools[t.p] || null;
+  const nearestTopSchool = schoolInfo?.n || null;
+  const nearestTopSchoolMeters = schoolInfo?.m ?? null;
+  const topSchoolsWithin1km = schoolInfo?.w || [];
+
+  // freehold 最早成交年份（TOP 参考）
+  const isFreehold = t.te?.toLowerCase().includes('freehold');
+  const earliestTxYear = isFreehold ? (STATE.projectEarliestTxYear[t.p] || null) : null;
+  // 对 freehold，没有 "from YYYY"，但可以用最早成交年估算楼龄
+  let effectiveAge = age;
+  if (effectiveAge === null && isFreehold && earliestTxYear) {
+    effectiveAge = 2026 - earliestTxYear;
+  }
+
+  return {
+    project: t.p, street: t.s, district: `D${t.d}`, region: t.r,
+    propertyType: t.pt, price, area_sqm: areaSqm, area_sqft: Math.round(sqft), psf,
+    rooms, tenure: t.te, age: effectiveAge, floor: t.f,
+    saleType: {'1':'New Sale','2':'Sub Sale','3':'Resale'}[t.t] || 'Unknown',
+    month, contractDate: t.cd,
+    mrtName: nearest?.name || null, mrtCode: nearest?.code || null,
+    mrtLines: nearest?.lines || [],
+    mrtMinutes: nearest?.walkMinutes ?? null, mrtMeters: nearest?.meters ?? null,
+    mrtAll: mrtInfo?.nearest || [],
+    lat: mrtInfo?.lat, lng: mrtInfo?.lng,
+    workplaceMeters, workplaceMinutes,
+    monthlyRent, annualRent, grossYield, prRatio, districtMedianYield,
+    rentalPeriod: rentalInfo?.p || null,
+    // 学区字段
+    nearestTopSchool, nearestTopSchoolMeters, topSchoolsWithin1km,
+    // freehold 最早成交年
+    isFreehold, earliestTxYear,
+    prNote: t.pt?.includes('Executive Condominium') ? 'EC: PR 可买（需 ABSD 豁免条件）' : '私宅，PR 可直接购买，首套 ABSD 5%'
+  };
+}
+
+async function init(){
+  const t0 = performance.now();
+
+  // Language setup (first thing)
+  _currentLang = detectLang();
+  applyI18nToStatic();
+  const langBtn = document.getElementById('lang-btn');
+  if (langBtn) langBtn.textContent = t('header.btn.lang');
+  updateGoalEcho();
+  updateWeightsSummary();
+
+  // 先让加载界面真正渲染出来（移动端关键）
+  setLoader(2, t('loader.start', '启动中...'), '');
+  await yieldToUI();
+  await yieldToUI();  // 双重 yield，确保移动端进度条可见
+  await yieldToUI();
+  Object.entries(EMBEDDED_DATA.mrt).forEach(([name, info]) => {
+    STATE.mrt[name] = {
+      lat: info.lat, lng: info.lng,
+      nearest: (info.n || []).map(s => ({ name: s.n, code: s.c, lines: s.l, walkMinutes: s.w, meters: s.m }))
+    };
+  });
+
+  setLoader(30, t('loader.parse', '解析 MRT 数据...'), '');
+  await yieldToUI();
+  Object.entries(STATE.mrt).forEach(([projName, info]) => {
+    (info.nearest || []).forEach(s => {
+      const k = s.name.toLowerCase();
+      if (!STATE.mrtStationIndex[k]) STATE.mrtStationIndex[k] = [];
+      STATE.mrtStationIndex[k].push({ project: projName, walkMinutes: s.walkMinutes, meters: s.meters });
+    });
+  });
+
+  setLoader(50, t('loader.index', '构建楼盘索引...'), `${STATE.rawTransactions.length.toLocaleString()} ${t('status.ok', '笔')}`);
+  await yieldToUI();
+  STATE.transactionsByProject = new Map();
+  const projectSet = new Set(), streetSet = new Set();
+  for (let i = 0; i < STATE.rawTransactions.length; i++) {
+    const tx = STATE.rawTransactions[i];
+    projectSet.add(tx.p);
+    if (tx.s) streetSet.add(tx.s);
+    if (!STATE.transactionsByProject.has(tx.p)) STATE.transactionsByProject.set(tx.p, []);
+    STATE.transactionsByProject.get(tx.p).push(tx);
+    const m = parseContractDate(tx.cd);
+    if (m) {
+      const year = parseInt(m.substring(0, 4));
+      if (!STATE.projectEarliestTxYear[tx.p] || year < STATE.projectEarliestTxYear[tx.p]) {
+        STATE.projectEarliestTxYear[tx.p] = year;
+      }
+    }
+    // 每 2000 条让出一次（移动端需要更频繁）
+    if (i > 0 && i % 2000 === 0) {
+      setLoader(50 + (i / STATE.rawTransactions.length * 35), t('loader.index', '构建楼盘索引...'), `${i.toLocaleString()} / ${STATE.rawTransactions.length.toLocaleString()}`);
+      await yieldToUI();
+    }
+  }
+  STATE.allProjects = [...projectSet];
+  STATE.allStreets = [...streetSet];
+
+  // ⚡ 趋势懒计算——用到才算，省去移动端 3-8s 启动瓶颈
+
+  setLoader(90, t('loader.ready', '准备就绪...'), '');
+  await yieldToUI();
+  const ms = (performance.now() - t0).toFixed(0);
+  console.log(`[INIT] ${ms}ms`);
+
+
+  document.getElementById('data-status').textContent = `${STATE.rawTransactions.length.toLocaleString()} ${t('list.txs','笔')} · live`;
+  document.getElementById('data-status').className = 'pill green';
+  document.getElementById('stats-brief').textContent = `${STATE.allProjects.length} 楼盘 · 初始化 ${ms}ms`;
+
+  // 初始化工作地点按钮
+  renderWorkplacePresets();
+  // 初始化价格范围
+  document.getElementById('fpMin').value = STATE.priceRange.min || '';
+  document.getElementById('fpMax').value = STATE.priceRange.max || '';
+  // 初始化设置面板
+  initSettings();
+
+  setLoader(100, t('loader.done', '完成！'), '');
+  await yieldToUI();
+  hideLoader();
+
+  switchView('proj');
+  doSearch();
+  // 初始化身份（触发 ABSD 对比表高亮 + rules-body + calc）
+  setIdentity(STATE.identity || 'pr', document.querySelector(`.id-btn[data-id="${STATE.identity || 'pr'}"]`));
+  // Auto-filter: bind change/input listeners to all filter controls
+  bindAutoFilters();
+}
+
+// Auto-filter: any filter change triggers search after 250ms debounce
+let _autoFilterTimer = null;
+function triggerAutoFilter() {
+  const status = document.getElementById('filter-live-status');
+  if (status) {
+    status.classList.add('searching');
+    const txt = status.querySelector('span:last-child');
+    if (txt) txt.textContent = t('filter.searching', 'Searching...');
+  }
+  clearTimeout(_autoFilterTimer);
+  _autoFilterTimer = setTimeout(() => {
+    doSearch();
+    if (status) {
+      status.classList.remove('searching');
+      const txt = status.querySelector('span:last-child');
+      if (txt) txt.textContent = t('filter.autoApply', 'Auto-applies on change');
+    }
+  }, 250);
+}
+
+function bindAutoFilters() {
+  // All select dropdowns in sidebar trigger auto-filter on change
+  ['fr','ft','fd','fa','fs','fmrt','fwp','fsch','fm'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', triggerAutoFilter);
+  });
+  // Price inputs - debounced input listener
+  ['fpMin','fpMax'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', triggerAutoFilter);
+  });
+}
+
+function sleep(ms){return new Promise(r => setTimeout(r, ms))}
+// 真正让出 UI 线程（8ms setTimeout > 0ms，iOS Safari 也有效）
+function yieldToUI(){ return new Promise(r => requestAnimationFrame(() => setTimeout(r, 30))); }
+// 懒计算趋势：首次访问时算，结果缓存，避免启动时卡顿
+function getProjectTrend(projName){
+  if(STATE.projectTrends[projName]!==undefined)return STATE.projectTrends[projName];
+  const rawTxs=STATE.transactionsByProject?.get(projName);
+  if(!rawTxs){STATE.projectTrends[projName]=null;return null;}
+  STATE.projectTrends[projName]=computeTrendFromTxs(rawTxs);
+  return STATE.projectTrends[projName];
+}
+
+function computeTrendFromTxs(rawTxs){
+  if (rawTxs.length < 3) return null;
+  const byMonth = {};
+  for (let i = 0; i < rawTxs.length; i++) {
+    const t = rawTxs[i];
+    const m = parseContractDate(t.cd);
+    if (!m) continue;
+    const psf = parseInt(t.pr) / (parseFloat(t.a) * 10.7639);
+    if (!byMonth[m]) byMonth[m] = [];
+    byMonth[m].push(psf);
+  }
+  const months = Object.keys(byMonth).sort().slice(-12);
+  if (months.length < 2) return null;
+  const f = byMonth[months[0]].sort((a,b) => a-b);
+  const l = byMonth[months[months.length-1]].sort((a,b) => a-b);
+  const fm = f[Math.floor(f.length/2)];
+  const lm = l[Math.floor(l.length/2)];
+  return (lm - fm) / fm * 100;
+}
+
+// ========== 工作地点管理 ==========
+// ========== 目标选择 ==========
+const GOAL_PRESETS = {
+  commute:  { weights: [12,10,12,40,12,14], label:'🏠 自住通勤' },
+  school:   { weights: [15,10,12,12,10,41], label:'🎓 学区' },
+  invest:   { weights: [20,25,15,10,10,20], label:'📈 投资' },
+  dip:      { weights: [28,38,8,8,8,10],   label:'📉 抄底' },
+  new:      { weights: [12,12,12,12,35,17], label:'✨ 新房' },
+  balanced: { weights: [17,17,17,17,16,16], label:'⚖️ 均衡' }
+};
+function setGoal(goalId, btn) {
+  document.querySelectorAll('.goal-btn').forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  const g = GOAL_PRESETS[goalId];
+  if (!g) return;
+  setWeights(g.weights);
+  // Also highlight matching preset button
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('on'));
+  const pb = document.querySelector(`.preset-btn[onclick*="'${goalId}'"]`);
+  if (pb) pb.classList.add('on');
+  onWeightChange();
+  updateGoalEcho();
+  STATE.currentGoal = goalId;
+}
+
+function updateGoalEcho() {
+  const active = document.querySelector('.goal-btn.on');
+  const el = document.getElementById('goal-echo-value');
+  if (!el) return;
+  if (!active) { el.textContent = '—'; return; }
+  // Find which goal it is by checking data-i18n
+  const key = active.getAttribute('data-i18n');
+  if (key) {
+    el.textContent = t(key);
+  } else {
+    el.textContent = active.textContent.trim();
+  }
+}
+
+function dismissIntro() { /* removed - intro card replaced by compact live status */ }
+
+// ========== Shortlist + Compare ==========
+function toggleShortlist(projName) {
+  if (STATE.shortlist.has(projName)) {
+    STATE.shortlist.delete(projName);
+  } else {
+    if (STATE.shortlist.size >= 4) { alert(t('sl.max', '最多对比 4 个楼盘')); return; }
+    STATE.shortlist.add(projName);
+  }
+  updateShortlistBar();
+  // Update star icon in any rendered cards
+  document.querySelectorAll('.pc-sl-btn').forEach(btn => {
+    const pn = btn.dataset.proj;
+    btn.classList.toggle('on', STATE.shortlist.has(pn));
+    btn.textContent = STATE.shortlist.has(pn) ? '★' : '☆';
+  });
+  document.querySelectorAll('.pc').forEach(card => {
+    const pn = card.dataset.proj;
+    if (pn) card.classList.toggle('shortlisted', STATE.shortlist.has(pn));
+  });
+}
+function updateShortlistBar() {
+  const bar = document.getElementById('shortlist-bar');
+  const chips = document.getElementById('shortlist-chips');
+  const countPill = document.getElementById('sl-count-pill');
+  if (STATE.shortlist.size === 0) {
+    bar.classList.remove('on');
+    countPill.style.display = 'none';
+    return;
+  }
+  bar.classList.add('on');
+  countPill.style.display = '';
+  countPill.textContent = `对比 ${STATE.shortlist.size}`;
+  chips.innerHTML = [...STATE.shortlist].map(pn =>
+    `<div class="sl-chip">${pn.length > 18 ? pn.substring(0,18)+'…' : pn} <button onclick="toggleShortlist('${pn.replace(/'/g,"\\'")}')">×</button></div>`
+  ).join('');
+}
+function clearShortlist() {
+  STATE.shortlist.clear();
+  updateShortlistBar();
+  document.querySelectorAll('.pc-sl-btn').forEach(btn => { btn.classList.remove('on'); btn.textContent = '☆'; });
+  document.querySelectorAll('.pc').forEach(c => c.classList.remove('shortlisted'));
+}
+function showCompareModal() {
+  if (STATE.shortlist.size < 2) { alert(t('sl.needTwo', '请先勾选至少 2 个楼盘再对比')); return; }
+  const projects = [...STATE.shortlist].map(pn => STATE.projectResults.find(p => p.project === pn)).filter(Boolean);
+  if (!projects.length) return;
+
+  const fields = [
+    { label: t('compare.medianPrice','中位价'), get: p => `$${(p.medianPrice/10000).toFixed(0)}万`, num: p => p.medianPrice, low: true },
+    { label: t('compare.medianPsf','中位 PSF'), get: p => `$${p.medianPsf?.toLocaleString()}`, num: p => p.medianPsf, low: true },
+    { label: t('compare.txCount','成交笔数'), get: p => p.txCount, num: p => p.txCount, low: false },
+    { label: t('compare.mrt','🚇 地铁'), get: p => p.mrtMinutes !== null ? `${p.mrtMinutes}min · ${p.mrtName||''}` : '—', num: p => p.mrtMinutes ?? 999, low: true },
+    { label: t('compare.commute','🏢 通勤'), get: p => p.workplaceMinutes !== null ? `${p.workplaceMinutes}min` : '—', num: p => p.workplaceMinutes ?? 999, low: true },
+    { label: t('compare.yield','租金回报'), get: p => p.projectGrossYield ? p.projectGrossYield+'%' : '—', num: p => p.projectGrossYield || 0, low: false },
+    { label: t('compare.school','🎓 Top学区'), get: p => p.nearestTopSchoolMeters !== null ? (p.nearestTopSchoolMeters <= 1000 ? `${p.nearestTopSchoolMeters}m ✨` : `${(p.nearestTopSchoolMeters/1000).toFixed(1)}km`) : '—', num: p => p.nearestTopSchoolMeters ?? 9999, low: true },
+    { label: t('compare.tenure','租约'), get: p => p.tenure || '—', num: null },
+    { label: t('compare.region','区域'), get: p => `${p.district} · ${p.region}`, num: null },
+    { label: t('compare.score','总评分'), get: p => p.avgScore, num: p => p.avgScore, low: false },
+    { label: t('compare.priceScore','💰 房价分'), get: p => p.dimScores.price, num: p => p.dimScores.price, low: false },
+    { label: t('compare.historyScore','📈 历史分'), get: p => p.dimScores.history, num: p => p.dimScores.history, low: false },
+    { label: t('compare.mrtScore','🚇 地铁分'), get: p => p.dimScores.mrt, num: p => p.dimScores.mrt, low: false },
+    { label: t('compare.workplaceScore','🏢 通勤分'), get: p => p.dimScores.workplace, num: p => p.dimScores.workplace, low: false },
+    { label: t('compare.ageScore','🏗 楼龄分'), get: p => p.dimScores.age, num: p => p.dimScores.age, low: false },
+    { label: t('compare.schoolScore','🎓 学区分'), get: p => p.dimScores.school, num: p => p.dimScores.school, low: false }
+  ];
+
+  let html = `<table class="compare-table"><thead><tr><th>${t('compare.metric','指标')}</th>${projects.map(p => `<th style="max-width:140px;word-break:break-word">${p.project}</th>`).join('')}</tr></thead><tbody>`;
+  fields.forEach(f => {
+    const vals = projects.map(p => f.get(p));
+    let bestIdx = -1;
+    if (f.num) {
+      const nums = projects.map(p => f.num(p));
+      const best = f.low ? Math.min(...nums) : Math.max(...nums);
+      bestIdx = nums.indexOf(best);
+    }
+    html += `<tr><td style="color:var(--text2);font-size:11px">${f.label}</td>${vals.map((v,i) => `<td class="${i===bestIdx?'best':''}">${v}</td>`).join('')}</tr>`;
+  });
+  html += `</tbody></table><div style="font-size:11px;color:var(--text3);margin-top:8px;font-family:'DM Mono',monospace">${t('compare.legend','绿色粗体 = 该项最优')}</div>`;
+  document.getElementById('compare-body').innerHTML = html;
+  document.getElementById('compare-modal').classList.add('on');
+}
+
+function switchCardTab() { /* removed - cards no longer use tabs */ }
+
+function renderWorkplacePresets() {
+  const c = document.getElementById('wp-presets');
+  if (!c) return;
+  c.innerHTML = WORKPLACE_PRESETS.map(w =>
+    `<button class="wp-preset-btn ${w.id===STATE.workplace.id?'on':''}" onclick="setWorkplace('${w.id}',this)">${w.label}</button>`
+  ).join('');
+}
+function updateWorkplaceDisplay() {} // display handled inline now
+
+function setWorkplace(id, btn) {
+  const w = WORKPLACE_PRESETS.find(x => x.id === id);
+  if (!w) return;
+  STATE.workplace = { id: w.id, label: w.label + ' (' + w.short + ')', lat: w.lat, lng: w.lng };
+  document.querySelectorAll('.wp-preset-btn').forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  updateWorkplaceDisplay();
+  document.getElementById('wp-lat').value = '';
+  document.getElementById('wp-lng').value = '';
+  doSearch();
+  // 如果地图已经加载了，自动刷新地图数据
+  if (STATE.map && STATE.markers.length > 0) {
+    STATE.markers = []; // 强制重新加载
+    setTimeout(() => loadMapData(), 100);
+  }
+}
+function applyCustomWorkplace() {
+  const lat = parseFloat(document.getElementById('wp-lat').value);
+  const lng = parseFloat(document.getElementById('wp-lng').value);
+  if (isNaN(lat) || isNaN(lng) || lat < 1 || lat > 2 || lng < 103 || lng > 105) {
+    alert('请输入有效的新加坡坐标\n(纬度约 1.2-1.5, 经度约 103.6-104.0)');
+    return;
+  }
+  STATE.workplace = { id: 'custom', label: `自定义 (${lat.toFixed(4)}, ${lng.toFixed(4)})`, lat, lng };
+  document.querySelectorAll('.wp-preset-btn').forEach(b => b.classList.remove('on'));
+  updateWorkplaceDisplay();
+  doSearch();
+  if (STATE.map && STATE.markers.length > 0) {
+    STATE.markers = [];
+    setTimeout(() => loadMapData(), 100);
+  }
+}
+function updateWorkplaceDisplay() {
+  document.getElementById('wp-current').textContent = `当前：${STATE.workplace.label} · ${STATE.workplace.lat.toFixed(3)}, ${STATE.workplace.lng.toFixed(3)}`;
+}
+
+// ========== 价格预设 ==========
+function setPricePreset(min, max, btn) {
+  document.getElementById('fpMin').value = min || '';
+  document.getElementById('fpMax').value = max || '';
+  document.querySelectorAll('.price-preset-btn').forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  triggerAutoFilter();
+}
+
+// ========== 评分 ==========
+function computeScores(records){
+  if (!records.length) return records;
+  const byRegion = {CCR:[], RCR:[], OCR:[]};
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i];
+    if (byRegion[r.region]) byRegion[r.region].push(r);
+    else byRegion[r.region] = [r];
+  }
+  const rm = {};
+  Object.keys(byRegion).forEach(reg => {
+    const arr = byRegion[reg];
+    if (!arr.length) { rm[reg] = null; return; }
+    const p = arr.map(x => x.price).sort((a,b) => a-b);
+    const ps = arr.map(x => x.psf).sort((a,b) => a-b);
+    rm[reg] = { count: arr.length, medianPrice: p[Math.floor(p.length/2)], medianPsf: ps[Math.floor(ps.length/2)] };
+  });
+  const allP = records.map(r => r.price).sort((a,b) => a-b);
+  const allPsf = records.map(r => r.psf).sort((a,b) => a-b);
+  const gMedP = allP[Math.floor(allP.length/2)];
+  const gMedPsf = allPsf[Math.floor(allPsf.length/2)];
+
+  for (let i = 0; i < records.length; i++) {
+    const r = records[i];
+    const region = rm[r.region], useRegion = region && region.count >= 5;
+    const medP = useRegion ? region.medianPrice : gMedP;
+    const medPsf = useRegion ? region.medianPsf : gMedPsf;
+    const pRatio = r.price / medP, psfRatio = r.psf / medPsf;
+    const pc = Math.max(0, Math.min(100, 100 - (pRatio-1)*200));
+    const pfc = Math.max(0, Math.min(100, 100 - (psfRatio-1)*200));
+    const priceScore = Math.round((pc+pfc)/2);
+    const priceExplain = {
+      your_price: r.price, your_psf: r.psf, your_region: r.region,
+      compared_against: useRegion ? `同区域 ${r.region}` : '全部结果',
+      sample_size: useRegion ? region.count : records.length,
+      median_price: medP, median_psf: medPsf,
+      price_diff_pct: Math.round((pRatio-1)*1000)/10,
+      psf_diff_pct: Math.round((psfRatio-1)*1000)/10,
+      formula: `100 − (你的值/${useRegion ? r.region + '中位' : '全局中位'} − 1) × 200`,
+      rationale: useRegion ? `同 ${r.region} 对比，避免 CCR/OCR 价差干扰` : `${r.region} 样本不足，改用全局对比`
+    };
+
+    const trend = getProjectTrend(r.project); // 懒计算
+    let hs = 75, hb = '数据不足';
+    if (trend !== null && trend !== undefined) {
+      if (trend < -5) { hs=50; hb=`大跌 ${trend.toFixed(1)}%`; }
+      else if (trend < -1) { hs=90; hb=`轻微下行 ${trend.toFixed(1)}% (买方机会)`; }
+      else if (trend < 2) { hs=85; hb=`平稳 ${trend.toFixed(1)}%`; }
+      else if (trend < 5) { hs=70; hb=`温和上涨 ${trend.toFixed(1)}%`; }
+      else if (trend < 10) { hs=55; hb=`快速上涨 ${trend.toFixed(1)}%`; }
+      else { hs=40; hb=`过热 ${trend.toFixed(1)}%`; }
+    }
+    const historyExplain = { trend_12m_pct: (trend === null || trend === undefined) ? null : Math.round(trend*10)/10, bucket: hb, formula: '12月 PSF 中位数变化分档', rationale: '平稳或轻跌 = 买方机会；大涨 = 风险' };
+
+    let ms=50, mb='MRT 数据缺失';
+    if (r.mrtMinutes !== null) {
+      if (r.mrtMinutes<=3){ms=100;mb='极近 ≤3分';}
+      else if (r.mrtMinutes<=5){ms=90;mb='很近 4-5分';}
+      else if (r.mrtMinutes<=7){ms=80;mb='较近 6-7分';}
+      else if (r.mrtMinutes<=10){ms=65;mb='中等 8-10分';}
+      else if (r.mrtMinutes<=15){ms=45;mb='较远 11-15分';}
+      else if (r.mrtMinutes<=20){ms=25;mb='远 16-20分';}
+      else {ms=10;mb='很远 >20分';}
+    }
+    const mrtExplain = { walk_minutes: r.mrtMinutes, meters: r.mrtMeters, nearest_mrt: r.mrtName, nearest_lines: r.mrtLines, bucket: mb, formula: '≤3=100, ≤5=90, ≤10=65, >20=10', rationale: 'MRT 依赖度高，影响通勤和转售' };
+
+    // 工作地距离评分（新）
+    let ws = 50, wb = '通勤数据缺失';
+    if (r.workplaceMinutes !== null) {
+      if (r.workplaceMinutes <= 15) { ws=100; wb=`极近 ${r.workplaceMinutes}分`; }
+      else if (r.workplaceMinutes <= 25) { ws=85; wb=`近 ${r.workplaceMinutes}分`; }
+      else if (r.workplaceMinutes <= 35) { ws=70; wb=`中等 ${r.workplaceMinutes}分`; }
+      else if (r.workplaceMinutes <= 45) { ws=50; wb=`偏远 ${r.workplaceMinutes}分`; }
+      else if (r.workplaceMinutes <= 60) { ws=30; wb=`远 ${r.workplaceMinutes}分`; }
+      else { ws=15; wb=`非常远 ${r.workplaceMinutes}分`; }
+    }
+    const workplaceExplain = {
+      workplace_label: STATE.workplace.label,
+      distance_meters: r.workplaceMeters,
+      commute_minutes: r.workplaceMinutes,
+      bucket: wb,
+      formula: '直线距离 × 2.5 系数 / 25km·h⁻¹ + 5分 = 预估通勤分钟',
+      rationale: '新加坡公共交通平均 25 km/h，实际路径约直线距离 2.5 倍（含换乘、绕路）'
+    };
+
+    // === 楼龄评分（指数衰减 + 地契系数 + 动态硬阈值）===
+    let as = 60, ab = '楼龄未知';
+    let tenureFactor = 1.0; // 地契系数
+    let cutOff = 1.0;       // 动态硬阈值
+    let ageRaw = null;      // 原始指数衰减分
+    const tenureLower = (r.tenure || '').toLowerCase();
+    const isFreehold = tenureLower.includes('freehold') || tenureLower.includes('999');
+
+    if (r.age !== null && r.age !== undefined) {
+      const a = r.age;
+      // 指数衰减：S(a) = 100 * exp(-k * a^n)
+      // 调参后 k=0.0028, n=1.6 满足建议表：3年≈98, 8年≈91, 15年≈75, 25年≈45, 35年≈18
+      ageRaw = Math.round(100 * Math.exp(-0.0028 * Math.pow(a, 1.6)));
+
+      // 双线交叉地契模型（FH 前期溢价拖累，后期 En-bloc 反超）
+      if (isFreehold) {
+        // FH 前 10 年高入场成本、低租金回报 → -15%
+        // 10-20 年线性回升至 -5%
+        // 21-30 年 LH 开始倒计时，FH 反超 +10%
+        // 30+ FH En-bloc 潜力显现 +25%
+        if (a <= 10) tenureFactor = 0.85;
+        else if (a <= 20) tenureFactor = 0.85 + (a - 10) * 0.01; // 0.85 → 0.95
+        else if (a <= 30) tenureFactor = 0.95 + (a - 20) * 0.015; // 0.95 → 1.10
+        else tenureFactor = 1.25;
+      } else {
+        // 99 年地契随剩余年限递减
+        const remainingLease = Math.max(0, 99 - a);
+        if (remainingLease >= 80) tenureFactor = 1.0;
+        else if (remainingLease >= 60) tenureFactor = 0.95;
+        else if (remainingLease >= 40) tenureFactor = 0.85;
+        else if (remainingLease >= 20) tenureFactor = 0.70;
+        else tenureFactor = 0.55;
+      }
+
+      // 动态硬阈值：仅对 LH 强制压制；FH 因 En-bloc 潜力部分免疫
+      if (a > 30) cutOff = isFreehold ? 0.85 : 0.5;
+      else if (a > 20) cutOff = isFreehold ? 0.92 : 0.7;
+
+      as = Math.round(ageRaw * tenureFactor * cutOff);
+      as = Math.max(0, Math.min(100, as));
+
+      // bucket 标签
+      if (a <= 3) ab = `准新房 ${a}年`;
+      else if (a <= 8) ab = `优质 ${a}年`;
+      else if (a <= 15) ab = `转折期 ${a}年`;
+      else if (a <= 25) ab = `衰减期 ${a}年`;
+      else ab = `老盘 ${a}年`;
+      if (isFreehold) ab += ' · 永久地契';
+    } else if (isFreehold) {
+      // 没有 age 但有 freehold（罕见，数据有缺失）
+      as = 75; ab = '永久地契（楼龄未知）';
+      ageRaw = 75;
+    }
+
+    const ageExplain = {
+      age_years: r.age,
+      tenure: r.tenure,
+      bucket: ab,
+      earliest_tx_year: r.earliestTxYear,
+      raw_score: ageRaw,
+      tenure_factor: tenureFactor,
+      cutoff_factor: cutOff,
+      final_score: as,
+      formula: '100 × exp(-0.0028 × age^1.6) × tenure × cutoff',
+      rationale: isFreehold
+        ? '永久地契：0-10 年高入场成本拖累 -15%；20 年后地契价值反超；30+ En-bloc 潜力 +25%'
+        : '99年地契随剩余年限递减；20年/30年硬阈值确保老盘不挤占首页'
+    };
+
+    // 学区评分
+    let schScore = 40, schBucket = '2km 外无 Top 小学';
+    if (r.nearestTopSchoolMeters !== null && r.nearestTopSchoolMeters !== undefined) {
+      if (r.nearestTopSchoolMeters <= 1000) {
+        schScore = 100; schBucket = `1km 内有 Top 小学 ✨`;
+      } else if (r.nearestTopSchoolMeters <= 2000) {
+        schScore = 70; schBucket = `1-2km 有 Top 小学`;
+      } else {
+        schScore = 40; schBucket = `最近 Top 小学 ${(r.nearestTopSchoolMeters/1000).toFixed(1)}km`;
+      }
+    }
+    const schoolExplain = {
+      nearest_school: r.nearestTopSchool,
+      nearest_meters: r.nearestTopSchoolMeters,
+      within_1km_count: r.topSchoolsWithin1km.length,
+      within_1km_list: r.topSchoolsWithin1km,
+      bucket: schBucket,
+      formula: '1km 内 Top 小学=100, 1-2km=70, 无=40',
+      rationale: '新加坡小一报名优先录取 1km 内住户，Top 学区是硬核购房逻辑'
+    };
+
+    r.scores = {
+      price: priceScore,
+      history: Math.round(hs),
+      mrt: Math.round(ms),
+      workplace: Math.round(ws),
+      age: Math.round(as),
+      school: Math.round(schScore)
+    };
+    r.scoreExplain = { price: priceExplain, history: historyExplain, mrt: mrtExplain, workplace: workplaceExplain, age: ageExplain, school: schoolExplain };
+    r.projectTrend = trend;
+  }
+  return records;
+}
+
+function applyWeights(r, w){
+  const { price, history, mrt, workplace, age, school } = r.scores;
+  const t = w.price + w.history + w.mrt + w.workplace + w.age + w.school;
+  if (t === 0) return 0;
+  return Math.round((price*w.price + history*w.history + mrt*w.mrt + workplace*w.workplace + age*w.age + school*w.school) / t);
+}
+
+// 搜索自动补全
+let suggestTimer, suggestActiveIdx = -1;
+document.getElementById('search-box').addEventListener('input', e => {
+  const q = e.target.value.trim();
+  document.getElementById('search-clear').classList.toggle('on', !!q);
+  clearTimeout(suggestTimer);
+  if (q.length < 2) { hideSuggest(); return; }
+  suggestTimer = setTimeout(() => loadSuggest(q), 100);
+});
+document.getElementById('search-box').addEventListener('keydown', e => {
+  const items = document.querySelectorAll('.suggest-item');
+  if (e.key === 'ArrowDown') { e.preventDefault(); suggestActiveIdx = Math.min(suggestActiveIdx+1, items.length-1); updateActive(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); suggestActiveIdx = Math.max(suggestActiveIdx-1, -1); updateActive(); }
+  else if (e.key === 'Enter' && suggestActiveIdx >= 0) { e.preventDefault(); items[suggestActiveIdx].click(); }
+  else if (e.key === 'Escape') hideSuggest();
+});
+document.addEventListener('click', e => { if (!e.target.closest('.search-wrap')) hideSuggest(); });
+function updateActive(){document.querySelectorAll('.suggest-item').forEach((el,i) => el.classList.toggle('active', i===suggestActiveIdx))}
+function loadSuggest(q){
+  const ql = q.toLowerCase();
+  const results = [];
+  Object.keys(STATE.mrtStationIndex).forEach(sn => {
+    if (sn.includes(ql)) results.push({type:'mrt',icon:'🚇',label:sn.replace(/\b\w/g,c=>c.toUpperCase())+' MRT',sub:`${STATE.mrtStationIndex[sn].length} 个附近楼盘`,value:sn,priority:sn.startsWith(ql)?1:2});
+  });
+  let pm = 0;
+  for (const p of STATE.allProjects) { if (p.toLowerCase().includes(ql)) { results.push({type:'project',icon:'🏢',label:p,sub:'楼盘',value:p,priority:p.toLowerCase().startsWith(ql)?1:3}); if (++pm >= 8) break; } }
+  let sm = 0;
+  for (const s of STATE.allStreets) { if (s.toLowerCase().includes(ql)) { results.push({type:'street',icon:'📍',label:s,sub:'街道',value:s,priority:4}); if (++sm >= 5) break; } }
+  results.sort((a,b) => a.priority-b.priority);
+  const suggestions = results.slice(0, 15);
+  const box = document.getElementById('suggest-box');
+  if (!suggestions.length) { hideSuggest(); return; }
+  const grouped = {mrt:[],project:[],street:[]};
+  suggestions.forEach(s => grouped[s.type]?.push(s));
+  let html = '';
+  ['mrt','project','street'].forEach(type => {
+    const labels = {mrt:'地铁站',project:'楼盘',street:'街道'};
+    if (grouped[type].length) {
+      html += `<div class="suggest-group">${labels[type]}</div>`;
+      grouped[type].forEach(s => { html += `<div class="suggest-item" onclick="applySearch('${s.type}','${s.value.replace(/'/g,"\\'")}','${s.label.replace(/'/g,"\\'")}')"><div class="suggest-icon">${s.icon}</div><div><div class="suggest-label">${s.label}</div><div class="suggest-sub">${s.sub}</div></div></div>`; });
+    }
+  });
+  box.innerHTML = html; box.classList.add('on'); suggestActiveIdx = -1;
+}
+function hideSuggest(){document.getElementById('suggest-box').classList.remove('on');suggestActiveIdx=-1}
+function applySearch(type,value,label){STATE.activeSearch={type,value,label};document.getElementById('search-box').value=label;document.getElementById('search-clear').classList.add('on');document.getElementById('search-tag-wrap').classList.add('on');document.getElementById('search-tag-pill').innerHTML=`${label} <button onclick="clearSearch()">×</button>`;hideSuggest();doSearch()}
+function clearSearch(){STATE.activeSearch=null;document.getElementById('search-box').value='';document.getElementById('search-clear').classList.remove('on');document.getElementById('search-tag-wrap').classList.remove('on');hideSuggest();doSearch()}
+
+// 权重
+function getWeights(){return{price:+document.getElementById('w-price').value,history:+document.getElementById('w-history').value,mrt:+document.getElementById('w-mrt').value,workplace:+document.getElementById('w-workplace').value,age:+document.getElementById('w-age').value,school:+document.getElementById('w-school').value}}
+function setWeights(a){document.getElementById('w-price').value=a[0];document.getElementById('w-history').value=a[1];document.getElementById('w-mrt').value=a[2];document.getElementById('w-workplace').value=a[3];document.getElementById('w-age').value=a[4];document.getElementById('w-school').value=a[5]||0;updateWeightDisplay()}
+function updateWeightDisplay(){const w=getWeights();document.getElementById('wv-price').textContent=w.price;document.getElementById('wv-history').textContent=w.history;document.getElementById('wv-mrt').textContent=w.mrt;document.getElementById('wv-workplace').textContent=w.workplace;document.getElementById('wv-age').textContent=w.age;document.getElementById('wv-school').textContent=w.school;const s=w.price+w.history+w.mrt+w.workplace+w.age+w.school;const wsumEl=document.getElementById('wsum');if(wsumEl){wsumEl.textContent=s;wsumEl.style.color=s===100?'var(--green)':'var(--red)'}}
+function onWeightChange(){updateWeightDisplay();updateWeightsSummary();if(STATE.currentResults.length){recomputeTotalScores();render()}}
+function setPreset(n,btn){document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');setWeights(PRESETS[n]);onWeightChange();}
+function updateWeightsSummary(){
+  const w = getWeights();
+  const activePreset = document.querySelector('.preset-btn.on');
+  let label = t('weight.summary.balanced', 'Balanced');
+  if (activePreset) {
+    const key = activePreset.getAttribute('data-i18n');
+    if (key) label = t(key.replace('weight.preset.', 'weight.summary.'));
+  }
+  const s = w.price+w.history+w.mrt+w.workplace+w.age+w.school;
+  const el = document.getElementById('weights-summary');
+  if (el) el.textContent = `${label} · ${t('weight.sum', 'Total')} ${s}`;
+}
+function recomputeTotalScores(){
+  const w = getWeights(); const t = w.price+w.history+w.mrt+w.workplace+w.age+w.school;
+  if (t === 0) return;
+  for (let i = 0; i < STATE.currentResults.length; i++) {
+    const r = STATE.currentResults[i];
+    if (!r.scores) continue;
+    r.totalScore = Math.round((r.scores.price*w.price + r.scores.history*w.history + r.scores.mrt*w.mrt + r.scores.workplace*w.workplace + r.scores.age*w.age + r.scores.school*w.school)/t);
+  }
+  STATE.projectResults = aggregateByProject(STATE.currentResults);
+}
+
+// 搜索
+function doSearch(){
+  clearStatus();
+  const t0 = performance.now();
+
+  const pmMin = +document.getElementById('fpMin').value || 0;
+  const pmMax = +document.getElementById('fpMax').value || 0;
+  const rm = +document.getElementById('fr').value;
+  const pt = document.getElementById('ft').value;
+  const rg = document.getElementById('fd').value;
+  const ag = +document.getElementById('fa').value;
+  const st = document.getElementById('fs').value;
+  const mrtFilter = +document.getElementById('fmrt').value;
+  const wpFilter = +document.getElementById('fwp').value;
+  const schFilter = +document.getElementById('fsch').value;  // 1=1km内, 2=2km内
+  const mo = +document.getElementById('fm').value;
+
+  let candidateTxs;
+  if (STATE.activeSearch) {
+    const v = STATE.activeSearch.value.toLowerCase();
+    if (STATE.activeSearch.type === 'project') {
+      candidateTxs = [];
+      STATE.transactionsByProject.forEach((txs, name) => { if (name.toLowerCase().includes(v)) candidateTxs.push(...txs); });
+    } else if (STATE.activeSearch.type === 'street') {
+      candidateTxs = STATE.rawTransactions.filter(t => t.s?.toLowerCase().includes(v));
+    } else if (STATE.activeSearch.type === 'mrt') {
+      const nearby = new Set();
+      (STATE.mrtStationIndex[v] || []).forEach(e => nearby.add(e.project));
+      candidateTxs = [];
+      nearby.forEach(name => { const txs = STATE.transactionsByProject.get(name); if (txs) candidateTxs.push(...txs); });
+    }
+  } else {
+    candidateTxs = STATE.rawTransactions;
+  }
+
+  let cutoffMonth = null;
+  if (mo && STATE.activeSearch?.type !== 'project') {
+    const c = new Date(); c.setMonth(c.getMonth() - mo);
+    cutoffMonth = c.toISOString().substring(0, 7);
+  }
+
+  const records = [];
+  for (let i = 0; i < candidateTxs.length; i++) {
+    const t = candidateTxs[i];
+    if (cutoffMonth) {
+      const m = parseContractDate(t.cd);
+      if (!m || m < cutoffMonth) continue;
+    }
+    const price = parseInt(t.pr);
+    if (pmMin && price < pmMin) continue;
+    if (pmMax && price > pmMax) continue;
+    if (pt && !t.pt?.toLowerCase().includes(pt.toLowerCase())) continue;
+    if (rg !== 'all' && t.r !== rg) continue;
+    if (st) {
+      const saleType = {'1':'New Sale','2':'Sub Sale','3':'Resale'}[t.t];
+      if (saleType !== st) continue;
+    }
+
+    const r = transformTx(t);
+    if (rm && r.rooms !== rm) continue;
+    if (ag && (r.age === null || r.age > ag)) continue;
+    if (mrtFilter && (r.mrtMinutes === null || r.mrtMinutes > mrtFilter)) continue;
+    if (wpFilter && (r.workplaceMinutes === null || r.workplaceMinutes > wpFilter)) continue;
+    if (schFilter) {
+      const schoolMeters = r.nearestTopSchoolMeters;
+      if (schFilter === 1 && (schoolMeters === null || schoolMeters > 1000)) continue;
+      if (schFilter === 2 && (schoolMeters === null || schoolMeters > 2000)) continue;
+    }
+
+    records.push(r);
+  }
+
+  computeScores(records);
+  const w = getWeights();
+  for (let i = 0; i < records.length; i++) records[i].totalScore = applyWeights(records[i], w);
+
+  STATE.currentResults = records;
+  let projectResults = aggregateByProject(records);
+
+  // Apply map bounding box filter if active
+  if (STATE.mapBBox) {
+    const bb = STATE.mapBBox;
+    projectResults = projectResults.filter(p =>
+      p.lat && p.lng &&
+      p.lat >= bb.south && p.lat <= bb.north &&
+      p.lng >= bb.west && p.lng <= bb.east
+    );
+  }
+  STATE.projectResults = projectResults;
+
+  const ms = (performance.now() - t0).toFixed(0);
+  if (STATE.activeSearch) showStatus('ok', `🔍 ${STATE.activeSearch.label} · ${records.length} 笔 · ${ms}ms`);
+  else showStatus('ok', `✓ ${records.length} 笔${STATE.mapBBox ? ` (框选内 ${projectResults.length} 楼盘)` : ''} · ${ms}ms`);
+
+  STATE.currentPage = 1;
+  render();
+}
+
+function aggregateByProject(txs){
+  const m = new Map();
+  for (let i = 0; i < txs.length; i++) {
+    const tx = txs[i];
+    if (!m.has(tx.project)) {
+      m.set(tx.project, {
+        project: tx.project, street: tx.street, region: tx.region, district: tx.district,
+        propertyType: tx.propertyType, tenure: tx.tenure,
+        mrtName: tx.mrtName, mrtCode: tx.mrtCode, mrtLines: tx.mrtLines,
+        mrtMinutes: tx.mrtMinutes, mrtMeters: tx.mrtMeters, mrtAll: tx.mrtAll,
+        workplaceMeters: tx.workplaceMeters, workplaceMinutes: tx.workplaceMinutes,
+        monthlyRent: tx.monthlyRent, rentalPeriod: tx.rentalPeriod,
+        // 学区（楼盘级别，所有 tx 共享）
+        nearestTopSchool: tx.nearestTopSchool,
+        nearestTopSchoolMeters: tx.nearestTopSchoolMeters,
+        topSchoolsWithin1km: tx.topSchoolsWithin1km,
+        // freehold 最早成交年
+        isFreehold: tx.isFreehold, earliestTxYear: tx.earliestTxYear,
+        lat: tx.lat, lng: tx.lng, transactions: [],
+        prNote: tx.prNote, projectTrend: tx.projectTrend
+      });
+    }
+    m.get(tx.project).transactions.push(tx);
+  }
+  const result = [];
+  m.forEach(p => {
+    const txs = p.transactions.sort((a,b) => (b.month||'').localeCompare(a.month||''));
+    const prices = txs.map(t => t.price);
+    const psfs = txs.map(t => t.psf);
+    const scores = txs.map(t => t.totalScore);
+    const sp = [...prices].sort((a,b) => a-b);
+    const spsf = [...psfs].sort((a,b) => a-b);
+    const medianPrice = sp[Math.floor(sp.length/2)];
+
+    let sumP=0, sumH=0, sumM=0, sumW=0, sumA=0, sumSc=0;
+    for (let i = 0; i < txs.length; i++) {
+      sumP += txs[i].scores.price;
+      sumH += txs[i].scores.history;
+      sumM += txs[i].scores.mrt;
+      sumW += txs[i].scores.workplace;
+      sumA += txs[i].scores.age;
+      sumSc += txs[i].scores.school;
+    }
+
+    // 楼盘级别的租售比（用中位价）
+    let projectGrossYield = null, projectPrRatio = null;
+    if (p.monthlyRent && medianPrice) {
+      projectGrossYield = parseFloat((p.monthlyRent * 12 / medianPrice * 100).toFixed(2));
+      projectPrRatio = parseFloat((medianPrice / (p.monthlyRent * 12)).toFixed(1));
+    }
+
+    result.push({
+      ...p, txCount: txs.length,
+      medianPrice,
+      minPrice: sp[0], maxPrice: sp[sp.length-1],
+      medianPsf: spsf[Math.floor(spsf.length/2)],
+      avgScore: Math.round(scores.reduce((a,b) => a+b, 0) / scores.length),
+      dimScores: {
+        price: Math.round(sumP/txs.length), history: Math.round(sumH/txs.length),
+        mrt: Math.round(sumM/txs.length), workplace: Math.round(sumW/txs.length),
+        age: Math.round(sumA/txs.length), school: Math.round(sumSc/txs.length)
+      },
+      projectGrossYield, projectPrRatio,
+      representative: txs[0], recentTxs: txs.slice(0, 5)
+    });
+  });
+  return result;
+}
+
+function showStatus(t,m){document.getElementById('status-msg').innerHTML=`<div class="status ${t}">${m}</div>`}
+function clearStatus(){document.getElementById('status-msg').innerHTML=''}
+function switchView(mode){STATE.viewMode=mode;document.getElementById('vt-proj').classList.toggle('on',mode==='proj');document.getElementById('vt-tx').classList.toggle('on',mode==='tx');const so=document.getElementById('so');so.innerHTML=SORT_OPTS_I18N[mode]().map(([v,l])=>`<option value="${v}">${l}</option>`).join('');STATE.currentPage=1;render()}
+function onPageSizeChange(){STATE.pageSize=+document.getElementById('page-size').value;STATE.currentPage=1;render()}
+
+function render(){
+  const by = document.getElementById('so').value;
+  let arr;
+  if (STATE.viewMode === 'proj') {
+    arr = [...STATE.projectResults];
+    if (by === 'score') arr.sort((a,b) => b.avgScore-a.avgScore);
+    else if (by === 'yield') arr.sort((a,b) => (b.projectGrossYield??-1)-(a.projectGrossYield??-1));
+    else if (by === 'school') arr.sort((a,b) => (a.nearestTopSchoolMeters??9e9)-(b.nearestTopSchoolMeters??9e9));
+    else if (by === 'workplace') arr.sort((a,b) => (a.workplaceMinutes??999)-(b.workplaceMinutes??999));
+    else if (by === 'mrt') arr.sort((a,b) => (a.mrtMinutes??99)-(b.mrtMinutes??99));
+    else if (by === 'count') arr.sort((a,b) => b.txCount-a.txCount);
+    else if (by === 'price') arr.sort((a,b) => a.medianPrice-b.medianPrice);
+    else if (by === 'price-desc') arr.sort((a,b) => b.medianPrice-a.medianPrice);
+    else if (by === 'psf') arr.sort((a,b) => a.medianPsf-b.medianPsf);
+  } else {
+    arr = [...STATE.currentResults];
+    if (by === 'score') arr.sort((a,b) => b.totalScore-a.totalScore);
+    else if (by === 'yield') arr.sort((a,b) => (b.grossYield??-1)-(a.grossYield??-1));
+    else if (by === 'school') arr.sort((a,b) => (a.nearestTopSchoolMeters??9e9)-(b.nearestTopSchoolMeters??9e9));
+    else if (by === 'workplace') arr.sort((a,b) => (a.workplaceMinutes??999)-(b.workplaceMinutes??999));
+    else if (by === 'mrt') arr.sort((a,b) => (a.mrtMinutes??99)-(b.mrtMinutes??99));
+    else if (by === 'pa') arr.sort((a,b) => a.price-b.price);
+    else if (by === 'pd') arr.sort((a,b) => b.price-a.price);
+    else if (by === 'psf') arr.sort((a,b) => a.psf-b.psf);
+    else if (by === 'new') arr.sort((a,b) => (b.month||'').localeCompare(a.month||''));
+  }
+  const total = arr.length;
+  const totalPages = Math.ceil(total / STATE.pageSize);
+  if (STATE.currentPage > totalPages) STATE.currentPage = Math.max(1, totalPages);
+  const start = (STATE.currentPage-1) * STATE.pageSize;
+  const pageData = arr.slice(start, start + STATE.pageSize);
+  if (STATE.viewMode === 'proj') {
+    document.getElementById('cnt').innerHTML = `<b>${total}</b> ${t('list.projects','projects')} · <span style="color:var(--t3)">${t('list.page','page')} ${STATE.currentPage} / ${totalPages||1}</span>`;
+    renderProjects(pageData, start);
+  } else {
+    document.getElementById('cnt').innerHTML = `<b>${total}</b> ${t('list.txs','txs')} · <span style="color:var(--t3)">${t('list.page','page')} ${STATE.currentPage} / ${totalPages||1}</span>`;
+    renderTxs(pageData, start);
+  }
+  renderPagination(total, totalPages);
+}
+
+function renderPagination(total, totalPages){
+  const p = document.getElementById('pagination');
+  if (!p) return;
+  if (total <= STATE.pageSize) { p.innerHTML = ''; return; }
+  let html = '';
+  // « First, ‹ Prev
+  html += `<button class="page-btn" onclick="goToPage(1)" ${STATE.currentPage===1?'disabled':''} title="First">«</button>`;
+  html += `<button class="page-btn" onclick="goToPage(${STATE.currentPage-1})" ${STATE.currentPage===1?'disabled':''} title="Prev">‹</button>`;
+  // Numbered pages with ellipsis
+  const pages = [];
+  const s = Math.max(1, STATE.currentPage-2), e = Math.min(totalPages, STATE.currentPage+2);
+  if (s > 1) pages.push(1);
+  if (s > 2) pages.push('...');
+  for (let i = s; i <= e; i++) pages.push(i);
+  if (e < totalPages-1) pages.push('...');
+  if (e < totalPages) pages.push(totalPages);
+  pages.forEach(n => {
+    if (n === '...') html += `<span class="page-info">…</span>`;
+    else html += `<button class="page-btn ${n===STATE.currentPage?'on':''}" onclick="goToPage(${n})">${n}</button>`;
+  });
+  // › Next, » Last
+  html += `<button class="page-btn" onclick="goToPage(${STATE.currentPage+1})" ${STATE.currentPage===totalPages?'disabled':''} title="Next">›</button>`;
+  html += `<button class="page-btn" onclick="goToPage(${totalPages})" ${STATE.currentPage===totalPages?'disabled':''} title="Last">»</button>`;
+  // Jump input
+  html += `<span class="page-info">${t('list.page','page')} <input type="number" min="1" max="${totalPages}" value="${STATE.currentPage}" class="page-jump" onkeydown="if(event.key==='Enter')goToPage(+this.value)"> / ${totalPages}</span>`;
+  p.innerHTML = html;
+}
+function goToPage(n){
+  const arr = STATE.viewMode === 'proj' ? STATE.projectResults : STATE.currentResults;
+  const max = Math.ceil(arr.length / STATE.pageSize);
+  STATE.currentPage = Math.max(1, Math.min(n, max));
+  render();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function scoreBadge(s){if(s>=80)return{color:'var(--green)'};if(s>=65)return{color:'var(--amber)'};return{color:'var(--red)'}}
+function mrtTag(m){if(m===null||m===undefined)return '<span class="tag">🚇 未知</span>';const cls=m<=5?'mrt-close':m<=10?'':'mrt-far';return `<span class="tag ${cls}">🚇 ${m}分</span>`}
+function workplaceTag(m){if(m===null||m===undefined)return '<span class="tag">🏢 未知</span>';const cls=m<=25?'work-close':m<=45?'':'mrt-far';return `<span class="tag ${cls}">🏢 通勤 ${m}分</span>`}
+function schoolTag(meters){
+  if (meters === null || meters === undefined) return '';
+  if (meters <= 1000) return `<span class="tag school-close">🎓 Top 小学 ${meters}m</span>`;
+  if (meters <= 2000) return `<span class="tag">🎓 Top 小学 ${(meters/1000).toFixed(1)}km</span>`;
+  return '';
+}
+function tenureTag(tenure, earliestTxYear) {
+  if (!tenure) return '';
+  if (tenure.toLowerCase().includes('freehold')) {
+    const yearNote = earliestTxYear ? ` (最早成交 ${earliestTxYear})` : '';
+    return `<span class="tag">永久地契${yearNote}</span>`;
+  }
+  return `<span class="tag">${tenure}</span>`;
+}
+
+// 学区信息块（楼盘视图）
+function schoolBlockForProject(p) {
+  // 如果整个数据集没有学校数据（用户还没跑 fetch-schools.js），不显示学区块
+  if (Object.keys(STATE.schools).length === 0) return '';
+  if (!p.nearestTopSchool || p.nearestTopSchoolMeters === null || p.nearestTopSchoolMeters === undefined) {
+    return `<div class="school-block far"><strong>🎓 ${t('card.school.title', 'Top 学区')}</strong>：${t('card.school.none', '2km 外无 Top 小学')}</div>`;
+  }
+  const m = p.nearestTopSchoolMeters;
+  const isClose = m <= 1000;
+  const within = p.topSchoolsWithin1km || [];
+
+  let listHtml = '';
+  if (within.length > 0) {
+    listHtml = `<div class="school-list">${within.slice(0, 5).map(s => {
+      const nm = s.n || s.name || '未知';
+      const mt = s.m ?? s.meters ?? 0;
+      return `<div class="school-row"><div>${nm}</div><div>${mt}m</div></div>`;
+    }).join('')}</div>`;
+    if (within.length > 5) listHtml += `<div style="font-size:11px;color:var(--text3);margin-top:4px;font-family:'DM Mono',monospace">${t('card.school.moreSchools', '…还有 N 所').replace('N', within.length - 5)}</div>`;
+  }
+
+  const title = isClose
+    ? t('card.school.within', 'Top 学区 (1km 内有 N 所)').replace('N', within.length)
+    : t('card.school.nearest', '最近 Top 小学');
+  return `<div class="school-block ${isClose?'':'far'}">
+    <strong>🎓 ${title}</strong>：${p.nearestTopSchool} · ${m <= 1000 ? m+'m' : (m/1000).toFixed(1)+'km'}
+    ${listHtml}
+  </div>`;
+}
+
+// 租售比显示块（楼盘视图用）
+function yieldBlockForProject(p) {
+  // 楼盘租售比：用中位价 + 租金中位
+  if (!p.monthlyRent || !p.projectGrossYield) {
+    return `<div class="yield-block no-data"><strong>💵 租售比</strong>：暂无租金数据<div style="font-size:11px;margin-top:4px">URA 仅公布有 ≥10 笔租赁合同的楼盘数据</div></div>`;
+  }
+  const yieldVal = p.projectGrossYield;
+  const yieldCls = yieldVal >= 4 ? 'hi' : yieldVal >= 3 ? 'mid' : 'lo';
+  const prVal = p.projectPrRatio;
+  const prCls = prVal < 20 ? 'hi' : prVal < 30 ? 'mid' : 'lo';
+
+  // 同区域对比
+  const districtD = p.district.replace('D','').padStart(2,'0');
+  const districtMedRent = STATE.districtMedianRent[districtD];
+  let compareHtml = '';
+  if (districtMedRent) {
+    const districtYield = parseFloat((districtMedRent * 12 / p.medianPrice * 100).toFixed(2));
+    const diff = yieldVal - districtYield;
+    const diffCls = diff >= 0 ? 'positive' : 'negative';
+    compareHtml = `<div class="yield-compare ${diffCls}">vs 同区域 ${p.district} 中位 Yield ${districtYield}% · 差距 ${diff>=0?'+':''}${diff.toFixed(2)}%</div>`;
+  }
+
+  return `<div class="yield-block">
+    <strong>💵 租售比（月租中位 $${p.monthlyRent.toLocaleString()}${p.rentalPeriod?' · '+p.rentalPeriod:''}）</strong>
+    <div class="yield-grid">
+      <div class="yield-cell"><div class="v ${yieldCls}">${yieldVal}%</div><div class="l">毛租金回报率</div></div>
+      <div class="yield-cell"><div class="v ${prCls}">${prVal}</div><div class="l">P/R 比（年）</div></div>
+      <div class="yield-cell"><div class="v">$${(p.monthlyRent*12/10000).toFixed(1)}万</div><div class="l">估年租金</div></div>
+    </div>
+    ${compareHtml}
+  </div>`;
+}
+
+// 租售比显示块（交易视图用，用单笔成交价）
+function yieldBlockForTx(tx) {
+  if (!tx.monthlyRent || !tx.grossYield) {
+    return '';  // tx 视图下不占空间
+  }
+  const yieldCls = tx.grossYield >= 4 ? 'hi' : tx.grossYield >= 3 ? 'mid' : 'lo';
+  const prCls = tx.prRatio < 20 ? 'hi' : tx.prRatio < 30 ? 'mid' : 'lo';
+  let compareHtml = '';
+  if (tx.districtMedianYield) {
+    const diff = tx.grossYield - tx.districtMedianYield;
+    compareHtml = `<div class="yield-compare ${diff>=0?'positive':'negative'}">vs ${tx.district} 中位 ${tx.districtMedianYield}% · 差距 ${diff>=0?'+':''}${diff.toFixed(2)}%</div>`;
+  }
+  return `<div class="yield-block">
+    <strong>💵 租售比（按本套成交价 $${(tx.price/10000).toFixed(0)}万）</strong>
+    <div class="yield-grid">
+      <div class="yield-cell"><div class="v ${yieldCls}">${tx.grossYield}%</div><div class="l">毛租金回报率</div></div>
+      <div class="yield-cell"><div class="v ${prCls}">${tx.prRatio}</div><div class="l">P/R 比（年）</div></div>
+      <div class="yield-cell"><div class="v">$${tx.monthlyRent.toLocaleString()}/月</div><div class="l">租金中位</div></div>
+    </div>
+    ${compareHtml}
+  </div>`;
+}
+
+// 外链按钮（PropertyGuru + 99.co + 社交媒体评价）
+function externalLinksHtml(projectName) {
+  const q = encodeURIComponent(projectName);
+  const qPlain = encodeURIComponent(projectName + ' singapore');
+  const qReview = encodeURIComponent(projectName + ' singapore condo review');
+  return `<div class="ext-links-wrap">
+    <div class="ext-links-group">
+      <span class="ext-links-label">${t('card.ext.property', '🏠 看房：')}</span>
+      <a class="ext-link pg" href="https://www.propertyguru.com.sg/property-for-sale?freetext=${q}" target="_blank" rel="noopener">PropertyGuru ↗</a>
+      <a class="ext-link nn" href="https://www.99.co/singapore/sale?query_coords=&query_type=project&query=${q}" target="_blank" rel="noopener">99.co ↗</a>
+      <a class="ext-link sf" href="https://www.squarefoot.com.sg/search?q=${q}" target="_blank" rel="noopener">SquareFoot ↗</a>
+    </div>
+    <div class="ext-links-group">
+      <span class="ext-links-label">${t('card.ext.reviews', '💬 看评价：')}</span>
+      <a class="ext-link reddit" href="https://www.reddit.com/search/?q=${q}&sort=relevance" target="_blank" rel="noopener">Reddit ↗</a>
+      <a class="ext-link youtube" href="https://www.youtube.com/results?search_query=${qReview}" target="_blank" rel="noopener">YouTube ↗</a>
+      <a class="ext-link xhs" href="https://www.xiaohongshu.com/search_result?keyword=${q}" target="_blank" rel="noopener">小红书 ↗</a>
+      <a class="ext-link google" href="https://www.google.com/search?q=${qReview}" target="_blank" rel="noopener">Google ↗</a>
+    </div>
+  </div>`;
+}
+
+// ========== 设置 ==========
+function saveStreetViewKey(){const el=document.getElementById('sv-key-input');if(!el)return;const k=el.value.trim();if(!k)return;localStorage.setItem('sg_sv_key',k);}
+function clearStreetViewKey(){localStorage.removeItem('sg_sv_key');}
+function saveExpandMode(v){localStorage.setItem('sg_expand_mode',v);}
+function getStreetViewKey(){return localStorage.getItem('sg_sv_key')||'';}
+function getExpandMode(){return localStorage.getItem('sg_expand_mode')||'manual';}
+function initSettings(){
+  // Settings modal now has no inputs to init
+  updateWeightsSummary();
+}
+function toggleCard(projKey){
+  const detail=document.getElementById(`detail-${projKey}`);
+  const btn=document.getElementById(`expand-btn-${projKey}`);
+  if(!detail)return;
+  const isOpen=detail.classList.contains('open');
+  if(!isOpen){
+    detail.classList.add('open');
+    if(btn)btn.textContent='收起 ↑';
+    // 懒加载 Street View 照片
+    const img=document.getElementById(`sv-img-${projKey}`);
+    if(img&&img.dataset.src&&!img.src){img.src=img.dataset.src;}
+  } else {
+    detail.classList.remove('open');
+    if(btn)btn.textContent='展开详情 ↓';
+  }
+}
+
+function scoreColor(s){return s>=80?'var(--good)':s>=60?'var(--warn)':s>=40?'var(--mid)':'var(--bad)'}
+function scoreColorClass(s){return s>=80?'good':s>=60?'warn':s>=40?'mid':'bad'}
+
+function renderProjects(list, startIdx){
+  const el = document.getElementById('rl');
+  if (!list.length) { el.innerHTML = `<div class="empty">${t('list.empty', '无符合条件的楼盘')}</div>`; return; }
+  const chunks = [];
+  for (let i = 0; i < list.length; i++) {
+    const p = list[i];
+    const pk = `p${startIdx+i}`;
+    const inSL = STATE.shortlist.has(p.project);
+    const isExpanded = STATE.expandedCards?.has(p.project) || false;
+    const sc = p.avgScore;
+    const scColor = scoreColor(sc);
+
+    // Score ring SVG params
+    const r = 22, c = 2*Math.PI*r;
+    const off = c - (sc/100) * c;
+
+    // Thumb initials (first letters of each word, max 4 chars)
+    const initials = p.project.split(/\s+/).map(w => w[0]).filter(Boolean).slice(0,4).join('');
+
+    // Compute age + tenure label
+    let ageNum = null;
+    const isFreehold = p.tenure?.toLowerCase().includes('freehold');
+    if (!isFreehold) {
+      const m = p.tenure?.match(/from (\d{4})/);
+      if (m) ageNum = 2026 - parseInt(m[1]);
+    } else if (p.earliestTxYear) {
+      ageNum = 2026 - p.earliestTxYear;
+    }
+
+    // PSF semantic class
+    const psf = p.medianPsf || 0;
+    const psfClass = psf <= 1500 ? 'good' : psf <= 2200 ? 'warn' : 'bad';
+    const psfLabel = psf <= 1500 ? 'great PSF' : psf <= 2200 ? 'mid PSF' : 'high PSF';
+
+    // Age semantic class
+    const ageClass = ageNum === null ? '' : ageNum <= 5 ? 'good' : ageNum <= 15 ? '' : 'warn';
+    const ageLabel = ageNum !== null ? `${ageNum}y` : '';
+
+    // Tenure semantic class
+    const tenureLabel = isFreehold ? 'Freehold' : '99 yr';
+    const tenureClass = isFreehold ? 'info' : '';
+
+    // MRT detail
+    const mrtDetail = p.mrtName ? `<div class="mrt-block"><strong>🚇 ${p.mrtName}</strong> ${p.mrtCode?'('+p.mrtCode+')':''} · ${p.mrtMinutes}min · ${p.mrtMeters}m${p.mrtAll.length>1?'<div class="mrt-list">'+p.mrtAll.slice(1,3).map(s=>`<div class="mrt-row"><div>${s.name} (${s.code})</div><div>${s.walkMinutes}min</div><div>${s.meters}m</div></div>`).join('')+'</div>':''}</div>` : '';
+
+    // School detail
+    const schoolDetail = schoolBlockForProject(p);
+
+    // Recent txs (max 3 rows for compactness)
+    const txRows = p.recentTxs.slice(0,3).map(tx=>`<div class="tx-row"><div>${tx.month||''}</div><div>${tx.floor}·${tx.area_sqft}sqft·${tx.rooms}BR</div><div>$${(tx.price/10000).toFixed(0)}万</div><div>$${tx.psf?.toLocaleString()}</div><div>${tx.saleType}</div></div>`).join('');
+
+    // Stats grid (4 cells)
+    const medianM = (p.medianPrice/1000000).toFixed(2);
+    const commuteScore = p.dimScores?.workplace || 0;
+
+    chunks.push(`<article class="pc ${inSL?'shortlisted':''} ${isExpanded?'expanded':''}" id="card-${pk}" data-proj="${p.project.replace(/"/g,'&quot;')}">
+      <div class="pc-top">
+        <div class="pc-thumb"><div class="pc-thumb-inner"><span class="pc-thumb-initials">${initials}</span>—${p.district}—</div></div>
+        <div class="pc-info">
+          <div class="pc-title-row">
+            <span class="pc-rank">#${startIdx+i+1}</span>
+            <h3 class="pc-name">${p.project}</h3>
+            <span class="pc-tag">${p.street} · ${p.district} ${p.region}</span>
+          </div>
+          <div class="pc-keyinfo">
+            <span class="ki">$${(p.minPrice/1000000).toFixed(2)}M – $${(p.maxPrice/1000000).toFixed(2)}M</span>
+            <span class="ki ${psfClass}">$${psf.toLocaleString()}/sqft · ${psfLabel}</span>
+            ${ageLabel ? `<span class="ki ${ageClass}">${ageLabel}</span>` : ''}
+            <span class="ki ${tenureClass}">${tenureLabel}</span>
+            ${p.workplaceMinutes !== null ? `<span class="ki info">🏢 ${p.workplaceMinutes}min</span>` : ''}
+            ${p.nearestTopSchoolMeters !== null && p.nearestTopSchoolMeters !== undefined && p.nearestTopSchoolMeters <= 2000 ? `<span class="ki school">🎓 ${p.nearestTopSchoolMeters <= 1000 ? p.nearestTopSchoolMeters+'m ✨' : (p.nearestTopSchoolMeters/1000).toFixed(1)+'km'}</span>` : ''}
+          </div>
+          <div class="ext-links-wrap">${externalLinksHtml(p.project)}</div>
+        </div>
+        <div class="pc-score" onclick="showScoreModal('${p.project.replace(/'/g,"\\'")}')" title="${t('card.score.hint', 'Click to see breakdown')}">
+          <div class="pc-score-ring">
+            <svg width="64" height="64">
+              <circle cx="32" cy="32" r="${r}" fill="none" stroke="var(--panel3)" stroke-width="5"/>
+              <circle cx="32" cy="32" r="${r}" fill="none" stroke="${scColor}" stroke-width="5" stroke-dasharray="${c}" stroke-dashoffset="${off}" stroke-linecap="round"/>
+            </svg>
+            <div class="ring-num" style="color:${scColor}">${sc}</div>
+          </div>
+          <div class="pc-score-label">SCORE</div>
+          <button class="pc-sl-btn ${inSL?'on':''}" data-proj="${p.project.replace(/"/g,'&quot;')}" onclick="event.stopPropagation();toggleShortlist('${p.project.replace(/'/g,"\\'")}')">${inSL?'★':'☆'}</button>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <div class="sb"><div class="sv">$${medianM}<small>M</small></div><div class="sl">${t('card.detail.medianPrice', 'Median price')}</div></div>
+        <div class="sb"><div class="sv">$${psf.toLocaleString()}</div><div class="sl">${t('card.detail.medianPsf', 'Median PSF')}</div></div>
+        <div class="sb"><div class="sv">${p.txCount}<small>tx</small></div><div class="sl">${t('card.detail.txCount', 'Recent tx')}</div></div>
+        <div class="sb"><div class="sv">${commuteScore}<small>/100</small></div><div class="sl">Commute</div></div>
+      </div>
+
+      <div class="pc-detail-content">
+        ${mrtDetail}
+        ${schoolDetail}
+        <div class="recent-tx-title">${t('card.recentTx.title', 'Recent transactions')}</div>
+        ${txRows}
+        <div style="text-align:right;margin-top:8px;font-size:11px"><span class="project-link" onclick="showProjectTrend('${p.project.replace(/'/g,"\\'")}')">${t('card.trendLink', 'View full price trend →')}</span></div>
+      </div>
+
+      <button class="pc-detail-toggle" onclick="toggleCardDetail('${p.project.replace(/'/g,"\\'")}')">
+        ${isExpanded ? 'Hide details' : 'Show MRT, schools & recent tx'}
+        <span class="chev">▼</span>
+      </button>
+    </article>`);
+  }
+  el.innerHTML = chunks.join('');
+}
+
+function toggleCardDetail(projName) {
+  if (!STATE.expandedCards) STATE.expandedCards = new Set();
+  if (STATE.expandedCards.has(projName)) STATE.expandedCards.delete(projName);
+  else STATE.expandedCards.add(projName);
+  // re-render just to toggle the class - find the card and toggle
+  document.querySelectorAll('.pc[data-proj]').forEach(c => {
+    const pn = c.dataset.proj;
+    if (pn === projName) {
+      c.classList.toggle('expanded');
+      const btn = c.querySelector('.pc-detail-toggle');
+      if (btn) {
+        const isExp = c.classList.contains('expanded');
+        btn.firstChild.textContent = (isExp ? 'Hide details' : 'Show MRT, schools & recent tx') + ' ';
+      }
+    }
+  });
+}
+
+function loanMiniHtml(price) {
+  const id = STATE.identity || 'pr';
+  const pn = 1;
+  const rate = 1.65;
+  const ten = 25;
+  if (!price) return '<div style="font-size:12px;color:var(--text3);padding:8px">暂无价格数据</div>';
+  const rates = ABSD_RATES[id];
+  const absdRate = rates[0]; // 首套
+  const absdPay = Math.round(price * absdRate);
+  const bsd = calcBSD(price);
+  const loan = Math.round(price * .75);
+  const dp = price - loan;
+  const cashMin = Math.round(price * .05);
+  const cpfUse = id === 'fn' ? 0 : Math.min(50000, dp - cashMin);
+  const cashNeed = dp - cpfUse;
+  const legal = Math.round(price * .004);
+  const total = cashNeed + bsd + absdPay + legal;
+  const rm = (rate/100)/12, n = ten*12;
+  const mo = Math.round(loan * rm * Math.pow(1+rm,n) / (Math.pow(1+rm,n)-1));
+  const identity_label = id === 'sc' ? '🇸🇬 公民' : id === 'pr' ? '🏠 PR' : '🌐 外国人';
+  return `<div class="loan-mini">
+    <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-family:'DM Mono',monospace">基于中位价 $${(price/10000).toFixed(0)}万 · ${identity_label} · 首套 · 25年 1.65%</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:8px">在<button onclick="document.getElementById('settings-modal').classList.add('on')" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:11px;padding:0 2px">⚙️ 设置</button>里切换身份 / 在贷款计算器标签精确计算</div>
+    <div class="calc-metrics">
+      <div class="metric"><div class="v">$${mo.toLocaleString()}</div><div class="l">月供</div></div>
+      <div class="metric"><div class="v" style="color:var(--red)">$${(absdPay/10000).toFixed(1)}万</div><div class="l">ABSD</div></div>
+      <div class="metric"><div class="v" style="color:var(--amber)">$${(total/10000).toFixed(1)}万</div><div class="l">入场现金</div></div>
+    </div>
+  </div>`;
+}
+
+function renderTxs(list, startIdx){
+  const el = document.getElementById('rl');
+  if (!list.length) { el.innerHTML = '<div class="empty">无成交</div>'; return; }
+  const chunks = [];
+  for (let i = 0; i < list.length; i++) {
+    const p = list[i];
+    const b = scoreBadge(p.totalScore);
+    const txJson = JSON.stringify(p).replace(/"/g,'&quot;').replace(/'/g,"&apos;");
+    chunks.push(`<div class="pc">
+      <div class="ph">
+        <div style="flex:1;min-width:0"><div class="pt">${startIdx+i+1}. ${p.project} <span style="font-weight:400;font-size:12px;color:var(--text3)">· ${p.floor} · ${p.area_sqft}sqft</span></div><div class="ps">${p.street} · ${p.district} · ${p.region}</div></div>
+        <div class="score-big" style="color:${b.color}" onclick='showScoreModalFromTx(${txJson})'><div class="v">${p.totalScore}</div><div class="l">总评分</div><div class="hint">点击</div></div>
+      </div>
+      <div class="mini-scores">
+        <div class="mini-score price" onclick='showScoreModalFromTx(${txJson},"price")'><div class="sv" style="color:#58a6ff">${p.scores.price}</div><div class="sl">💰房价</div></div>
+        <div class="mini-score history" onclick='showScoreModalFromTx(${txJson},"history")'><div class="sv" style="color:#3fb950">${p.scores.history}</div><div class="sl">📈历史</div></div>
+        <div class="mini-score mrt" onclick='showScoreModalFromTx(${txJson},"mrt")'><div class="sv" style="color:#d29922">${p.scores.mrt}</div><div class="sl">🚇地铁</div></div>
+        <div class="mini-score workplace" onclick='showScoreModalFromTx(${txJson},"workplace")'><div class="sv" style="color:#39c5cf">${p.scores.workplace}</div><div class="sl">🏢通勤</div></div>
+        <div class="mini-score age" onclick='showScoreModalFromTx(${txJson},"age")'><div class="sv" style="color:#a371f7">${p.scores.age}</div><div class="sl">🏗楼龄</div></div>
+        <div class="mini-score school" onclick='showScoreModalFromTx(${txJson},"school")'><div class="sv" style="color:#ec4899">${p.scores.school}</div><div class="sl">🎓学区</div></div>
+      </div>
+      <div class="tags"><span class="tag g">${p.prNote}</span><span class="tag">${p.saleType}</span><span class="tag">${p.rooms}室</span>${p.age!==null?`<span class="tag">楼龄${p.age}年</span>`:''}${p.isFreehold?`<span class="tag">永久${p.earliestTxYear?` (最早成交 ${p.earliestTxYear})`:''}</span>`:''}${mrtTag(p.mrtMinutes)}${workplaceTag(p.workplaceMinutes)}${schoolTag(p.nearestTopSchoolMeters)}<span class="tag">${p.month}</span></div>
+      <div class="s4">
+        <div class="sb"><div class="sv">$${(p.price/10000).toFixed(1)}万</div><div class="sl">成交价</div></div>
+        <div class="sb"><div class="sv">$${p.psf.toLocaleString()}</div><div class="sl">PSF</div></div>
+        <div class="sb"><div class="sv">$${((p.price*.05)/10000).toFixed(1)}万</div><div class="sl">ABSD</div></div>
+        <div class="sb"><div class="sv">${p.workplaceMinutes!==null?p.workplaceMinutes+'分':'?'}</div><div class="sl">通勤</div></div>
+      </div>
+      ${yieldBlockForTx(p)}
+      ${externalLinksHtml(p.project)}
+    </div>`);
+  }
+  el.innerHTML = chunks.join('');
+}
+
+function showScoreModalFromTx(tx, focusDim){ renderScoreModal(tx, focusDim); }
+function showScoreModal(projectName, focusDim){ const proj = STATE.projectResults.find(p => p.project === projectName); if (!proj) return; renderScoreModal(proj.representative, focusDim); }
+function renderScoreModal(tx, focusDim){
+  if (!tx?.scoreExplain) return;
+  const w = getWeights(), totalW = w.price + w.history + w.mrt + w.workplace + w.age + w.school;
+  const totalScore = tx.totalScore || Math.round((tx.scores.price*w.price + tx.scores.history*w.history + tx.scores.mrt*w.mrt + tx.scores.workplace*w.workplace + tx.scores.age*w.age + tx.scores.school*w.school)/totalW);
+  document.getElementById('score-mod-title').textContent = `${tx.project} · 评分拆解`;
+  document.getElementById('score-mod-sub').textContent = `${tx.street} · ${tx.district} · ${tx.region} · ${tx.rooms}室 · $${(tx.price/10000).toFixed(0)}万`;
+  const e = tx.scoreExplain;
+  const dims = [
+    {key:'price',icon:'💰',name:'房价合理度',score:tx.scores.price,weight:w.price,explain:e.price},
+    {key:'history',icon:'📈',name:'历史趋势',score:tx.scores.history,weight:w.history,explain:e.history},
+    {key:'mrt',icon:'🚇',name:'地铁距离',score:tx.scores.mrt,weight:w.mrt,explain:e.mrt},
+    {key:'workplace',icon:'🏢',name:'通勤（工作地）',score:tx.scores.workplace,weight:w.workplace,explain:e.workplace},
+    {key:'age',icon:'🏗',name:'楼龄',score:tx.scores.age,weight:w.age,explain:e.age},
+    {key:'school',icon:'🎓',name:'Top 小学学区',score:tx.scores.school,weight:w.school,explain:e.school}
+  ];
+  let html = '';
+  dims.forEach(d => {
+    const hl = focusDim === d.key ? 'box-shadow:0 0 0 2px var(--accent)' : '';
+    const sb = scoreBadge(d.score);
+    let detail = '';
+    if (d.key === 'price') { const ex = d.explain; detail = `<div class="score-dim-detail"><b>对比基准</b>：${ex.compared_against}（${ex.sample_size} 样本）<div class="score-dim-rationale">💡 ${ex.rationale}</div><div class="score-dim-compare"><div class="compare-row"><span>你的成交价</span><b>$${(ex.your_price/10000).toFixed(0)}万</b></div><div class="compare-row"><span>同区域中位价</span><b>$${(ex.median_price/10000).toFixed(0)}万</b></div><div class="compare-row"><span>差距</span><b style="color:${ex.price_diff_pct<0?'var(--green)':'var(--red)'}">${ex.price_diff_pct>=0?'+':''}${ex.price_diff_pct}%</b></div><div class="compare-row" style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--border)"><span>你的 PSF</span><b>$${ex.your_psf.toLocaleString()}/sqft</b></div><div class="compare-row"><span>同区域中位 PSF</span><b>$${ex.median_psf.toLocaleString()}/sqft</b></div><div class="compare-row"><span>差距</span><b style="color:${ex.psf_diff_pct<0?'var(--green)':'var(--red)'}">${ex.psf_diff_pct>=0?'+':''}${ex.psf_diff_pct}%</b></div></div><div class="score-dim-formula">📐 ${ex.formula}</div></div>`; }
+    else if (d.key === 'history') { const ex = d.explain; detail = `<div class="score-dim-detail"><b>12月 PSF 变化</b>：${ex.trend_12m_pct!==null?(ex.trend_12m_pct>=0?'+':'')+ex.trend_12m_pct+'%':'数据不足'}<div class="score-dim-rationale">💡 ${ex.rationale}</div><div class="score-dim-compare"><div class="compare-row"><span>落在区间</span><b>${ex.bucket}</b></div></div><div class="score-dim-formula">📐 ${ex.formula}</div></div>`; }
+    else if (d.key === 'mrt') { const ex = d.explain; detail = `<div class="score-dim-detail"><b>最近 MRT</b>：${ex.nearest_mrt||'未知'} ${ex.nearest_lines?.length?'('+ex.nearest_lines.join(', ')+')':''}<div class="score-dim-rationale">💡 ${ex.rationale}</div><div class="score-dim-compare"><div class="compare-row"><span>步行时间</span><b>${ex.walk_minutes!==null?ex.walk_minutes+' 分钟':'未知'}</b></div><div class="compare-row"><span>直线距离</span><b>${ex.meters!==null?ex.meters+'m':'—'}</b></div><div class="compare-row"><span>落在区间</span><b>${ex.bucket}</b></div></div><div class="score-dim-formula">📐 ${ex.formula}</div></div>`; }
+    else if (d.key === 'workplace') { const ex = d.explain; detail = `<div class="score-dim-detail"><b>工作地</b>：${ex.workplace_label}<div class="score-dim-rationale">💡 ${ex.rationale}</div><div class="score-dim-compare"><div class="compare-row"><span>直线距离</span><b>${ex.distance_meters!==null?(ex.distance_meters/1000).toFixed(1)+' km':'—'}</b></div><div class="compare-row"><span>预估通勤</span><b>${ex.commute_minutes!==null?ex.commute_minutes+' 分钟':'—'}</b></div><div class="compare-row"><span>落在区间</span><b>${ex.bucket}</b></div></div><div class="score-dim-formula">📐 ${ex.formula}</div></div>`; }
+    else if (d.key === 'age') { const ex = d.explain; const yearInfo = ex.earliest_tx_year ? `<div class="compare-row"><span>最早成交年（TOP 参考）</span><b>${ex.earliest_tx_year}</b></div>` : ''; detail = `<div class="score-dim-detail"><b>tenure</b>：${ex.tenure}<div class="score-dim-rationale">💡 ${ex.rationale}</div><div class="score-dim-compare"><div class="compare-row"><span>楼龄</span><b>${ex.age_years!==null?ex.age_years+' 年':'未知'}</b></div>${yearInfo}<div class="compare-row"><span>落在区间</span><b>${ex.bucket}</b></div></div><div class="score-dim-formula">📐 ${ex.formula}</div></div>`; }
+    else if (d.key === 'school') {
+      const ex = d.explain;
+      const listHtml = ex.within_1km_list && ex.within_1km_list.length ? `<div style="margin-top:8px;font-family:'DM Mono',monospace;font-size:11px;line-height:1.7">${ex.within_1km_list.map(s => { const nm=s.n||s.name||'未知'; const mt=s.m??s.meters??0; return `<div style="display:flex;justify-content:space-between;color:var(--text2)"><span>${nm}</span><b>${mt}m</b></div>`; }).join('')}</div>` : '';
+      detail = `<div class="score-dim-detail"><b>最近 Top 小学</b>：${ex.nearest_school || '无（2km 外）'}<div class="score-dim-rationale">💡 ${ex.rationale}</div><div class="score-dim-compare"><div class="compare-row"><span>距离</span><b>${ex.nearest_meters!==null?(ex.nearest_meters<=1000?ex.nearest_meters+'m':(ex.nearest_meters/1000).toFixed(1)+'km'):'—'}</b></div><div class="compare-row"><span>1km 内 Top 小学数量</span><b style="color:${ex.within_1km_count>0?'#ec4899':'var(--text2)'}">${ex.within_1km_count} 所</b></div><div class="compare-row"><span>落在区间</span><b>${ex.bucket}</b></div>${listHtml}</div><div class="score-dim-formula">📐 ${ex.formula}</div></div>`;
+    }
+    html += `<div class="score-dim ${d.key}" style="${hl}"><div class="score-dim-head"><div class="score-dim-name">${d.icon} ${d.name} <span style="font-size:11px;color:var(--text3);margin-left:8px;font-family:'DM Mono',monospace">权重 ${d.weight}</span></div><div class="score-dim-val" style="color:${sb.color}">${d.score}</div></div>${detail}</div>`;
+  });
+  html += `<div class="weight-calc"><div style="font-size:12px;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">加权总分计算</div>${dims.map(d => `<div class="weight-calc-line"><span>${d.name}</span><span>${d.score} × ${d.weight}% = ${(d.score*d.weight/totalW).toFixed(1)}</span></div>`).join('')}<div class="weight-calc-total weight-calc-line"><span>总评分</span><span>${totalScore}</span></div></div>`;
+  document.getElementById('score-mod-body').innerHTML = html;
+  document.getElementById('score-modal').classList.add('on');
+}
+
+function showHelp(){document.getElementById('help-modal').classList.add('on')}
+
+function showProjectTrend(name){
+  document.getElementById('mod-title').textContent = name;
+  const rawTxs = STATE.transactionsByProject.get(name);
+  if (!rawTxs || !rawTxs.length) { document.getElementById('mod-body').innerHTML = '无数据'; return; }
+  const txs = rawTxs.map(transformTx).sort((a,b) => (b.month||'').localeCompare(a.month||''));
+  document.getElementById('mod-sub').textContent = `${txs[0].street} · ${txs[0].district} · ${txs[0].region} · ${txs.length}笔历史`;
+  const bm = {};
+  txs.forEach(t => { if (!t.month) return; if (!bm[t.month]) bm[t.month] = {prices:[], psfs:[]}; bm[t.month].prices.push(t.price); bm[t.month].psfs.push(t.psf); });
+  const months = Object.keys(bm).sort().slice(-12);
+  const trend = months.map(m => { const {prices, psfs} = bm[m]; return {month:m, count:prices.length, medianPsf:psfs.sort((a,b) => a-b)[Math.floor(psfs.length/2)]}; });
+  const s = trend[0]?.medianPsf, e = trend[trend.length-1]?.medianPsf;
+  const pct = s ? parseFloat(((e-s)/s*100).toFixed(1)) : 0;
+  const maxPsf = Math.max(...trend.map(t => t.medianPsf), 1);
+  const tc = pct < 0 ? '#f85149' : pct > 3 ? '#3fb950' : '#d29922';
+  document.getElementById('mod-body').innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <div class="sb" style="flex:1"><div class="sv">${txs.length}</div><div class="sl">历史成交</div></div>
+      <div class="sb" style="flex:1"><div class="sv" style="color:${tc}">${pct>=0?'+':''}${pct}%</div><div class="sl">12月PSF变化</div></div>
+      <div class="sb" style="flex:1"><div class="sv">$${trend[trend.length-1]?.medianPsf?.toLocaleString()||'—'}</div><div class="sl">最近中位PSF</div></div>
+    </div>
+    <div class="trend-chart">${trend.map(t => `<div class="trend-row"><div>${t.month}</div><div class="trend-bar"><div class="trend-bar-fill" style="width:${(t.medianPsf/maxPsf*100).toFixed(0)}%;background:${tc}"></div></div><div>$${t.medianPsf.toLocaleString()}/sqft</div><div style="color:var(--text3)">${t.count}笔</div></div>`).join('')}</div>`;
+  document.getElementById('trend-modal').classList.add('on');
+}
+
+function closeModal(id){document.getElementById(id).classList.remove('on')}
+
+function resetF(){
+  document.getElementById('fpMin').value='1000000';
+  document.getElementById('fpMax').value='1500000';
+  document.querySelectorAll('.price-preset-btn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.price-preset-btn')[2].classList.add('on');
+  document.getElementById('fr').value='3';
+  document.getElementById('ft').value='Condominium';
+  document.getElementById('fd').value='all';
+  document.getElementById('fa').value='0';
+  document.getElementById('fs').value='';
+  document.getElementById('fmrt').value='0';
+  document.getElementById('fwp').value='0';
+  document.getElementById('fsch').value='0';
+  document.getElementById('fm').value='6';
+  setWeights(PRESETS.new);
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('on'));
+  // Also clear map filter
+  if (STATE.mapBBox) { STATE.mapBBox = null; const tag = document.getElementById('map-filter-tag'); const tagS = document.getElementById('map-filter-tag-sidebar'); if(tag) tag.classList.remove('on'); if(tagS) tagS.style.display='none'; }
+  // Activate "new" preset and goal
+  const newPresetBtn = document.querySelector('.preset-btn[onclick*="\'new\'"]');
+  if (newPresetBtn) newPresetBtn.classList.add('on');
+  document.querySelectorAll('.goal-btn').forEach(b => b.classList.remove('on'));
+  const newGoalBtn = document.querySelector('.goal-btn[onclick*="\'new\'"]');
+  if (newGoalBtn) newGoalBtn.classList.add('on');
+  updateGoalEcho();
+  updateWeightsSummary();
+  setWorkplace('cbd', document.querySelector('.wp-preset-btn'));
+  clearSearch();
+}
+
+// sw() removed - replaced by modal-based map
+
+function initMap(){
+  if (STATE.map) { try { STATE.map.invalidateSize(); } catch(e){} return; }
+  const wrap = document.getElementById('fullmap');
+  if (!wrap) return;
+  try {
+    wrap.innerHTML = '<div id="leafmap" style="width:100%;height:100%"></div>';
+    STATE.map = L.map('leafmap', {zoomControl:true, preferCanvas:true}).setView([1.352,103.819],11);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{attribution:'© OSM © CARTO',maxZoom:18,subdomains:'abcd'}).addTo(STATE.map);
+    setTimeout(() => STATE.map.invalidateSize(), 300);
+    console.log('[MAP] init OK');
+  } catch(err) {
+    console.error('[MAP] init fail:', err);
+    wrap.innerHTML = `<div class="empty" style="color:var(--red)">地图初始化失败：${err.message}</div>`;
+  }
+}
+
+// ========== 顶部页面切换 ==========
+function switchPage(page) {
+  document.querySelectorAll('.page-panel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('on'));
+  document.getElementById(`page-${page}`).classList.add('on');
+  document.getElementById(`tt-${page}`).classList.add('on');
+
+  if (page === 'map') {
+    // init map on first open
+    setTimeout(() => {
+      initMap();
+      if (STATE.map) {
+        STATE.map.invalidateSize();
+        if (STATE.markers.length === 0) loadMapData();
+      }
+    }, 100);
+  } else if (page === 'calc') {
+    // trigger calc
+    setTimeout(() => calc(), 50);
+  }
+}
+
+// ========== 地图交互：框选 + 点击联动 ==========
+let _mapSelectRect = null, _mapSelectStart = null;
+
+function toggleMapSelectMode() {
+  STATE.mapSelectMode = !STATE.mapSelectMode;
+  const btn = document.getElementById('map-select-btn');
+  const mapEl = document.getElementById('fullmap');
+  if (STATE.mapSelectMode) {
+    btn.classList.add('active');
+    btn.innerHTML = '✕ 取消框选';
+    if (mapEl) mapEl.classList.add('leaflet-map-select');
+    STATE.map.on('mousedown', _onMapMouseDown);
+    STATE.map.dragging.disable();
+  } else {
+    btn.classList.remove('active');
+    btn.innerHTML = '⬚ 框选筛选区域';
+    if (mapEl) mapEl.classList.remove('leaflet-map-select');
+    STATE.map.off('mousedown', _onMapMouseDown);
+    STATE.map.dragging.enable();
+  }
+}
+
+function _onMapMouseDown(e) {
+  _mapSelectStart = e.latlng;
+  if (_mapSelectRect) { try { STATE.map.removeLayer(_mapSelectRect); } catch(ex){} _mapSelectRect = null; }
+  function onMove(e2) {
+    const b = L.latLngBounds(_mapSelectStart, e2.latlng);
+    if (_mapSelectRect) try { STATE.map.removeLayer(_mapSelectRect); } catch(ex){}
+    _mapSelectRect = L.rectangle(b, {color:'#58a6ff', weight:2, fillOpacity:0.1, dashArray:'6,4'}).addTo(STATE.map);
+  }
+  function onUp(e2) {
+    STATE.map.off('mousemove', onMove);
+    STATE.map.off('mouseup', onUp);
+    const b = L.latLngBounds(_mapSelectStart, e2.latlng);
+    applyMapBBoxFilter(b);
+    toggleMapSelectMode();
+  }
+  STATE.map.on('mousemove', onMove);
+  STATE.map.on('mouseup', onUp);
+}
+
+function applyMapBBoxFilter(bounds) {
+  STATE.mapBBox = { north:bounds.getNorth(), south:bounds.getSouth(), east:bounds.getEast(), west:bounds.getWest() };
+  const tag = document.getElementById('map-filter-tag');
+  const tagS = document.getElementById('map-filter-tag-sidebar');
+  if (tag) tag.classList.add('on');
+  if (tagS) tagS.style.display = 'inline-flex';
+  doSearch();
+}
+
+function clearMapFilter() {
+  STATE.mapBBox = null;
+  if (_mapSelectRect) { try { STATE.map.removeLayer(_mapSelectRect); } catch(e){} _mapSelectRect = null; }
+  const tag = document.getElementById('map-filter-tag');
+  const tagS = document.getElementById('map-filter-tag-sidebar');
+  if (tag) tag.classList.remove('on');
+  if (tagS) tagS.style.display = 'none';
+  const lbl = document.getElementById('map-count-label');
+  if (lbl) lbl.textContent = '';
+  doSearch();
+}
+
+function scrollToProject(projName) {
+  // Switch to search page
+  switchPage('search');
+  setTimeout(() => {
+    const cards = document.querySelectorAll('.pc[data-proj]');
+    let found = null;
+    cards.forEach(c => { if (decodeURIComponent(c.dataset.proj) === projName || c.dataset.proj === projName) found = c; });
+    if (!found) return;
+    found.scrollIntoView({ behavior:'smooth', block:'center' });
+    found.classList.add('map-highlighted');
+    setTimeout(() => found.classList.remove('map-highlighted'), 2500);
+  }, 300);
+}
+
+function loadMapData(){
+  try {
+    if (!STATE.map) { initMap(); setTimeout(loadMapData, 400); return; }
+
+    STATE.markers.forEach(m => { try { STATE.map.removeLayer(m); } catch(e){} });
+    STATE.markers = [];
+    if (STATE.workplaceMarker) { try { STATE.map.removeLayer(STATE.workplaceMarker); } catch(e){} STATE.workplaceMarker = null; }
+
+    const projects = STATE.projectResults.slice(0, 300);
+    if (!projects.length) {
+      document.getElementById('mleg').innerHTML = `<span style="color:var(--amber)">⚠ ${t('map.noResults', '当前筛选无结果')}</span>`;
+      drawWorkplaceMarker();
+      STATE.map.setView([STATE.workplace.lat, STATE.workplace.lng], 12);
+      return;
+    }
+
+    drawWorkplaceMarker();
+    const bounds = [[STATE.workplace.lat, STATE.workplace.lng]];
+    let plotted = 0;
+
+    projects.forEach(p => {
+      if (!p.lat || !p.lng || isNaN(p.lat) || isNaN(p.lng)) return;
+      const inBBox = !STATE.mapBBox || (
+        p.lat >= STATE.mapBBox.south && p.lat <= STATE.mapBBox.north &&
+        p.lng >= STATE.mapBBox.west && p.lng <= STATE.mapBBox.east
+      );
+      const color = p.avgScore >= 80 ? '#3fb950' : p.avgScore >= 65 ? '#d29922' : '#f85149';
+      const opacity = inBBox ? 1 : 0.22;
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="background:${color};color:#000;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid rgba(255,255,255,.9);box-shadow:0 2px 6px rgba(0,0,0,.5);font-family:monospace;opacity:${opacity}">${p.avgScore}</div>`,
+        iconSize:[34,34], iconAnchor:[17,17]
+      });
+      const mk = L.marker([p.lat, p.lng], {icon}).addTo(STATE.map);
+      const safeProj = p.project.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      mk.bindPopup(`<div style="font-family:sans-serif;min-width:220px;color:#333">
+        <div style="font-weight:700;font-size:13px">${p.project}</div>
+        <div style="font-size:11px;color:#666">${p.street} · ${p.district}</div>
+        <div style="font-size:12px;margin:4px 0">中位 $${(p.medianPrice/10000).toFixed(0)}万 · $${p.medianPsf}/sqft</div>
+        ${p.mrtName ? `<div style="font-size:11px;color:#b8860b">🚇 ${p.mrtName} ${p.mrtMinutes}分</div>` : ''}
+        ${p.workplaceMinutes !== null ? `<div style="font-size:11px;color:#007a80">🏢 通勤 ${p.workplaceMinutes}分</div>` : ''}
+        <button onclick="scrollToProject('${safeProj}')" style="margin-top:6px;width:100%;padding:5px;background:#0d1117;color:#e6edf3;border:1px solid #30363d;border-radius:4px;cursor:pointer;font-size:12px">→ 跳转到列表</button>
+      </div>`);
+      STATE.markers.push(mk);
+      if (inBBox) bounds.push([p.lat, p.lng]);
+      plotted++;
+    });
+
+    if (bounds.length > 1) { try { STATE.map.fitBounds(bounds, {padding:[40,40], maxZoom:14}); } catch(e){} }
+
+    const inBBoxCount = STATE.mapBBox
+      ? projects.filter(p => p.lat && p.lng && p.lat >= STATE.mapBBox.south && p.lat <= STATE.mapBBox.north && p.lng >= STATE.mapBBox.west && p.lng <= STATE.mapBBox.east).length
+      : plotted;
+    const bboxNote = STATE.mapBBox ? ` · ${t('map.inBox', 'in box')} <b>${inBBoxCount}</b>` : '';
+    document.getElementById('mleg').innerHTML =
+      `<span><span class="ld" style="background:#22c55e"></span>${t('map.legend.high','≥80')}</span>
+       <span><span class="ld" style="background:#eab308"></span>${t('map.legend.mid','65-79')}</span>
+       <span><span class="ld" style="background:#f97316"></span>40-59</span>
+       <span><span class="ld" style="background:#ef4444"></span>${t('map.legend.low','<40')}</span>
+       <span><span class="ld" style="background:#06b6d4"></span>${t('map.legend.workplace','💼 Workplace')}</span>
+       <span style="margin-left:auto;color:var(--t3)">${plotted} ${t('list.projects', 'projects')}${bboxNote}</span>`;
+
+    // Render side list
+    renderMiniList(projects);
+
+    // Bind moveend listener once - re-render mini list when user pans/zooms
+    if (!STATE._miniListBound) {
+      STATE.map.on('moveend zoomend', () => renderMiniList(STATE.projectResults.slice(0, 300)));
+      STATE._miniListBound = true;
+    }
+
+  } catch (err) {
+    console.error('[MAP] loadMapData 失败:', err);
+    const mleg = document.getElementById('mleg');
+    if (mleg) mleg.innerHTML = `<span style="color:var(--bad)">${t('map.fail','Map init failed')}：${err.message}</span>`;
+  }
+}
+
+function renderMiniList(projects) {
+  const el = document.getElementById('miniList');
+  if (!el || !STATE.map) return;
+  const bounds = STATE.map.getBounds();
+  // Filter to currently visible projects in viewport, sort by score
+  const visible = projects
+    .filter(p => p.lat && p.lng && bounds.contains([p.lat, p.lng]))
+    .sort((a,b) => (b.avgScore||0) - (a.avgScore||0))
+    .slice(0, 30);
+
+  if (!visible.length) {
+    el.innerHTML = `<div style="font-size:11px;color:var(--t3);padding:20px;text-align:center;font-family:'JetBrains Mono'">${t('map.noResults','No results')}</div>`;
+    return;
+  }
+
+  el.innerHTML = visible.map(p => {
+    const sc = p.avgScore;
+    const col = sc >= 80 ? 'var(--good)' : sc >= 60 ? 'var(--warn)' : sc >= 40 ? 'var(--mid)' : 'var(--bad)';
+    const safeProj = p.project.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    return `<div class="miniresult" data-proj="${safeProj}" onclick="flyToProject('${p.project.replace(/'/g, "\\'")}')">
+      <div class="miniring" style="border-color:${col};color:${col}">${sc}</div>
+      <div class="mini-name">
+        <b>${p.project}</b>
+        <span>${p.district} · ${p.region}${p.mrtName ? ' · 🚇 '+p.mrtMinutes+'min' : ''}</span>
+      </div>
+      <div class="mini-price">$${(p.medianPrice/1000000).toFixed(2)}M</div>
+    </div>`;
+  }).join('');
+}
+
+function flyToProject(projName) {
+  const p = STATE.projectResults.find(x => x.project === projName);
+  if (!p || !p.lat || !p.lng || !STATE.map) return;
+  STATE.map.flyTo([p.lat, p.lng], Math.max(STATE.map.getZoom(), 16), { duration: 0.6 });
+  // Find marker and open popup
+  const mk = STATE.markers.find(m => {
+    const ll = m.getLatLng();
+    return Math.abs(ll.lat - p.lat) < 0.0001 && Math.abs(ll.lng - p.lng) < 0.0001;
+  });
+  if (mk) setTimeout(() => mk.openPopup(), 300);
+  // Highlight active row
+  document.querySelectorAll('.miniresult').forEach(r => r.classList.remove('active'));
+  document.querySelectorAll('.miniresult').forEach(r => {
+    if (r.dataset.proj === projName) r.classList.add('active');
+  });
+}
+
+function drawWorkplaceMarker() {
+  const wpIcon = L.divIcon({
+    className: '',
+    html: `<div style="background:#39c5cf;color:#000;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.6)">💼</div>`,
+    iconSize: [44,44], iconAnchor: [22,22]
+  });
+  STATE.workplaceMarker = L.marker([STATE.workplace.lat, STATE.workplace.lng], {icon: wpIcon, zIndexOffset: 1000}).addTo(STATE.map);
+  STATE.workplaceMarker.bindPopup(`<div style="font-family:sans-serif;color:#333;min-width:180px"><div style="font-weight:600">💼 工作地点</div><div style="font-size:11px;color:#666;margin-top:2px">${STATE.workplace.label}</div><div style="font-size:10px;color:#999;font-family:monospace;margin-top:2px">${STATE.workplace.lat.toFixed(4)}, ${STATE.workplace.lng.toFixed(4)}</div></div>`);
+}
+
+function calcBSD(p){const slabs=[[180000,.01],[180000,.02],[640000,.03],[500000,.04],[1500000,.05],[1e9,.06]];let b=0,rem=p;for(const[lim,r]of slabs){const c=Math.min(rem,lim);b+=c*r;rem-=c;if(rem<=0)break}return Math.round(b)}
+
+// ABSD 税率表（2026）
+const ABSD_RATES = {
+  sc: [0.00, 0.20, 0.30],     // 公民：0%, 20%, 30%
+  pr: [0.05, 0.30, 0.35],     // PR：5%, 30%, 35%
+  fn: [0.60, 0.60, 0.60]      // 外国人：60% 一刀切
+};
+const IDENTITY_LABEL = { sc: '🇸🇬 公民', pr: '🏠 PR', fn: '🌐 外国人' };
+
+function setIdentity(id, btn) {
+  if (!['sc','pr','fn'].includes(id)) return;
+  STATE.identity = id;
+
+  // 按钮高亮
+  document.querySelectorAll('.id-btn').forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  else document.querySelector(`.id-btn[data-id="${id}"]`)?.classList.add('on');
+
+  // ABSD 对比表高亮当前身份那一行
+  ['sc','pr','fn'].forEach(x => {
+    document.getElementById(`absd-row-${x}`)?.classList.toggle('current', x === id);
+  });
+
+  // 外国人：禁用 CPF 输入（外国人不能用 CPF）+ 禁用 EC 选项（EC 只对 SC/PR）
+  const cpfWrap = document.getElementById('cpf-wrap');
+  const ctp = document.getElementById('ctp');
+  if (id === 'fn') {
+    cpfWrap?.classList.add('disabled');
+    // 把 EC 选项禁掉
+    const ecOpt = ctp?.querySelector('option[value="e"]');
+    if (ecOpt) { ecOpt.disabled = true; if (ctp.value === 'e') ctp.value = 'p'; }
+  } else {
+    cpfWrap?.classList.remove('disabled');
+    const ecOpt = ctp?.querySelector('option[value="e"]');
+    if (ecOpt) ecOpt.disabled = false;
+  }
+
+  // 更新提示文字
+  updateRulesBody();
+  calc();
+}
+
+function updateRulesBody() {
+  const id = STATE.identity;
+  const el = document.getElementById('rules-body');
+  if (el) el.innerHTML = t(`calc.rules.${id}`, '');
+}
+
+function calc(){
+  // 独立贷款计算面板（若存在）或直接用默认值
+  const id = STATE.identity || 'pr';
+  const price = +(document.getElementById('cp')?.value) || 1500000;
+  const pn = +(document.getElementById('cn')?.value) || 1;
+  const pt = document.getElementById('ctp')?.value || 'p';
+  const ten = +(document.getElementById('ctn')?.value) || 25;
+  const rate = +(document.getElementById('cr')?.value) || 1.65;
+  const cpf = (id === 'fn') ? 0 : (+(document.getElementById('cc')?.value) || 0);
+
+  const rates = ABSD_RATES[id];
+  const absdRate = rates[Math.min(pn-1, 2)];
+  const absdFull = Math.round(price * absdRate);
+  const ecExempt = (pt === 'e') && (id !== 'fn');
+  const absdPay = ecExempt ? 0 : absdFull;
+  const bsd = calcBSD(price);
+  const loan = Math.round(price * .75);
+  const dp = price - loan;
+  const cashMin = Math.round(price * .05);
+  const cpfUse = Math.min(cpf, dp - cashMin);
+  const cashNeed = dp - cpfUse;
+  const legal = Math.round(price * .004);
+  const total = cashNeed + bsd + absdPay + legal;
+  const rm = (rate/100) / 12, n = ten * 12;
+  const mo = Math.round(loan * rm * Math.pow(1+rm,n) / (Math.pow(1+rm,n)-1));
+  const totI = Math.round(mo * n - loan);
+  const pct = (absdRate * 100).toFixed(0);
+  const snLbl = pn===1 ? t('calc.label.1st','首套') : pn===2 ? t('calc.label.2nd','第2套') : t('calc.label.3rd','第3+套');
+  const idLabels = { sc: t('calc.id.sc','🇸🇬 公民'), pr: t('calc.id.pr','🏠 PR'), fn: t('calc.id.fn','🌐 外国人') };
+  const aLbl = `${idLabels[id]} · ${snLbl} ${pct}%`;
+  const ecN = ecExempt ? t('calc.cost.ecExempt', ' (EC豁免)') : '';
+  const cpfRow = (id === 'fn')
+    ? `<tr><td style="padding-left:14px;color:var(--text3)">${t('calc.cost.cpf','— CPF-OA')}</td><td style="color:var(--text3)">${t('calc.cost.cpfNA','—（外国人不可用）')}</td></tr>`
+    : `<tr><td style="padding-left:14px">${t('calc.cost.cpf','— CPF-OA')}</td><td class="ok">$${cpfUse.toLocaleString()}</td></tr>`;
+  const tableHtml = `<tr><td>${t('calc.cost.price','房价')}</td><td>$${price.toLocaleString()}</td></tr>
+    <tr><td>${t('calc.cost.loan','贷款 (75%)')}</td><td>$${loan.toLocaleString()}</td></tr>
+    <tr><td>${t('calc.cost.down','首付 (25%)')}</td><td>$${dp.toLocaleString()}</td></tr>
+    <tr><td style="padding-left:14px">${t('calc.cost.cash','— 现金')}</td><td class="${cashNeed>price*.1?'warn':'ok'}">$${cashNeed.toLocaleString()}</td></tr>
+    ${cpfRow}
+    <tr><td>${t('calc.cost.bsd','BSD')}</td><td class="warn">$${bsd.toLocaleString()}</td></tr>
+    <tr><td>${t('calc.cost.absd','ABSD')} (${aLbl})${ecN}</td><td class="${absdPay>0?'warn':'ok'}">$${absdPay.toLocaleString()}</td></tr>
+    <tr><td>${t('calc.cost.legal','律师费')}</td><td>$${legal.toLocaleString()}</td></tr>
+    <tr class="tr-total"><td><strong>${t('calc.cost.total','入场现金')}</strong></td><td class="warn"><strong>$${total.toLocaleString()}</strong></td></tr>`;
+  const metricsHtml = `<div class="metric"><div class="v">$${mo.toLocaleString()}</div><div class="l">${t('calc.metric.monthly','月供')}</div></div>
+    <div class="metric"><div class="v">$${(totI/10000).toFixed(1)}万</div><div class="l">${ten}${t('calc.metric.interest','年利息')}</div></div>
+    <div class="metric"><div class="v">$${(total/10000).toFixed(1)}万</div><div class="l">${t('calc.metric.totalCash','入场现金')}</div></div>`;
+
+  // 写回：只有元素存在才写
+  const ctbl = document.getElementById('ctbl');
+  const mr = document.getElementById('mr');
+  if (ctbl) ctbl.innerHTML = tableHtml;
+  if (mr) mr.innerHTML = metricsHtml;
+}
+
+updateWeightDisplay();
+init();
+</script>
+</body>
+</html>
