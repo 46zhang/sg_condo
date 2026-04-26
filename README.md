@@ -8,7 +8,7 @@ Built with **PR / foreigner buyer perspective** in mind (ABSD, BSD, CPF rules). 
 
 [**🔗 Try it live →**](https://46zhang.github.io/sg_condo/)
 
-![SGCondo screenshot](docs/sg_condo_screenshot.png)
+![SGCondo screenshot](docs/sg_condo_screenshot)
 
 ---
 
